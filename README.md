@@ -24,3 +24,6 @@ Reuse bundled dist assets with Capacitor; add native app lifecycle/back handling
 
 ## Version 0.3
 Help → 백업 복원 restores the previous automatic save after confirmation. Invalid or missing backups do not overwrite the current save. Restoration reloads paused. Tests cover corrupt/missing backups and storage write failure.
+
+## Version 0.4
+New expedition saves a separate pre-reset snapshot. Help → 새 탐사 이전 복원 restores it even after automatic backups rotate. Storage failure cancels reset before changing live state.

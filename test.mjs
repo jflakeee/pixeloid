@@ -19,3 +19,15 @@ assert.equal(decode(data.get(KEY)).mined,s.mined);
 assert.equal(data.get(KEY+'-backup'),encode(s));
 assert.throws(()=>restoreBackup({...storage,setItem(){throw new Error('Quota exceeded');}}));
 console.log('PASS: backup restore, missing/corrupt backup protection, write failure.');
+
+const {resetSave}=await import('./dist/storage.mjs');
+const resetSnapshot=encode(s);storage.setItem(KEY,resetSnapshot);
+const reset=resetSave(storage,s);assert.equal(reset.mined,0);
+assert.equal(data.get(KEY+'-before-reset'),resetSnapshot);
+storage.setItem(KEY+'-backup',encode(reset));
+assert.equal(restoreBackup(storage,'before-reset').mined,s.mined);
+const preserved=data.get(KEY);
+assert.throws(()=>resetSave({...storage,setItem(){throw Error('Storage full');}},s));
+assert.equal(data.get(KEY),preserved);
+assert.throws(()=>restoreBackup(storage,'invalid'));
+console.log('PASS: reset snapshot survives autosave, reset write failure preserves progress.');

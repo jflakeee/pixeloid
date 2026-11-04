@@ -1,8 +1,18 @@
-import {KEY,encode,decode} from './core.mjs';
-export function restoreBackup(storage){
- const raw=storage.getItem(KEY+'-backup');
+import {KEY,encode,decode,fresh} from './core.mjs';
+export function restoreBackup(storage,source='backup'){
+ if(!['backup','before-reset'].includes(source))throw new Error('알 수 없는 백업');
+ const raw=storage.getItem(KEY+'-'+source);
  if(!raw)throw new Error('복원할 백업이 없습니다');
  const state=decode(raw); // Validate before replacing the current save.
  storage.setItem(KEY,encode(state));
  return state;
+}
+
+export function resetSave(storage,current){
+ // Separate snapshot survives later automatic-save rotation.
+ const snapshot=encode(current);decode(snapshot);
+ const next=fresh();
+ storage.setItem(KEY+'-before-reset',snapshot);
+ storage.setItem(KEY,encode(next));
+ return next;
 }

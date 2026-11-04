@@ -1,4 +1,4 @@
-import {restoreBackup} from './storage.mjs';
+import {restoreBackup,resetSave} from './storage.mjs';
 import{W,H,KEY,TYPES,fresh,hit,frontier,deploy,configure,buy,cost,progress,activate,step,encode,decode}from'./core.mjs';
 const $=id=>document.getElementById(id),canvas=$('game'),ctx=canvas.getContext('2d');let s=fresh(),running=false,started=false,selected=0,zoom=1,pan={x:0,y:0},scale=1,ox=0,oy=0,viewW=0,viewH=0,last=0,uiClock=0,saveClock=0,toastClock=0,eventCount='',audio=null,sound=false,hitSoundAt=0,storageBlocked=false,resumeAfterSheet=false,draft=[3,0,0];
 try{const raw=localStorage.getItem(KEY);if(raw){s=decode(raw);started=Boolean(s.started);if(started)$('start').classList.add('hidden');$('pause').textContent='▶';}}catch{storageBlocked=true;$('saveState').textContent='저장 읽기 실패 · 기존 기록을 보존합니다';}
@@ -43,16 +43,21 @@ function openGrowth(){draft=[...s.counts];renderComposition();openSheet('growthD
 $('openGrowth').onclick=openGrowth;$('openDevices').onclick=()=>openSheet('devicesDialog');
 $('applyConfig').onclick=()=>{if(configure(s,draft)){save();closeSheet($('growthDialog'));toast('구성 적용 · 전체 구체를 목표 근처로 보냈어요');}};
 $('help').onclick=()=>openSheet('helpDialog');
-$('restoreBackup').onclick=()=>{
+let restoreSource='backup';
+function requestRestore(source){
+ restoreSource=source;$('restoreError').textContent='';
+ $('restoreDescription').textContent=source==='before-reset'?'마지막 새 탐사 시작 직전의 기록으로 돌아갑니다. 현재 진행 상황은 교체됩니다.':'직전 자동 저장 백업으로 돌아갑니다. 현재 진행 상황은 교체됩니다.';
  $('helpDialog').addEventListener('close',()=>openSheet('restoreDialog'),{once:true});$('helpDialog').close();
 };
+$('restoreBackup').onclick=()=>requestRestore('backup');
+$('restoreReset').onclick=()=>requestRestore('before-reset');
 $('confirmRestore').onclick=()=>{
- try{restoreBackup(localStorage);}catch{ $('restoreError').textContent='복원하지 못했습니다. 정상 백업이 없거나 저장 공간을 사용할 수 없습니다. 현재 기록은 유지됩니다.';return; }
+ try{restoreBackup(localStorage,restoreSource);}catch{ $('restoreError').textContent='복원하지 못했습니다. 정상 백업이 없거나 저장 공간을 사용할 수 없습니다. 현재 기록은 유지됩니다.';return; }
  storageBlocked=true; // Prevent pagehide from replacing the restored save.
  location.reload();
 };
 $('reset').onclick=()=>{if($('helpDialog').open){$('helpDialog').addEventListener('close',()=>openSheet('confirmDialog'),{once:true});$('helpDialog').close();}else openSheet('confirmDialog');};
-$('confirmReset').onclick=()=>{s=fresh();storageBlocked=false;selected=0;started=false;running=false;resumeAfterSheet=false;lastMined=-1;zoom=1;pan={x:0,y:0};layout();$('start').classList.remove('hidden');document.querySelectorAll('[data-type]').forEach(b=>b.classList.toggle('active',b.dataset.type==='0'));$('confirmDialog').close();try{localStorage.setItem(KEY,encode(s));}catch{storageBlocked=true;}$('saveState').textContent='새 탐사를 시작합니다';updateUI();};
+$('confirmReset').onclick=()=>{try{s=resetSave(localStorage,s);}catch{$('resetError').textContent='저장할 수 없어 초기화를 취소했습니다. 현재 탐사는 유지됩니다.';return;}storageBlocked=false;selected=0;started=false;running=false;resumeAfterSheet=false;lastMined=-1;zoom=1;pan={x:0,y:0};layout();$('start').classList.remove('hidden');document.querySelectorAll('[data-type]').forEach(b=>b.classList.toggle('active',b.dataset.type==='0'));$('confirmDialog').close();$('saveState').textContent='새 탐사를 시작합니다';updateUI();};
 $('sound').onclick=async()=>{sound=!sound;if(sound){try{audio??=new(window.AudioContext||window.webkitAudioContext)();await audio.resume();}catch{sound=false;toast('이 브라우저는 효과음을 지원하지 않아요');}}$('sound').textContent=sound?'소리 켬':'소리 끔';$('sound').setAttribute('aria-pressed',String(sound));};
 $('zoomin').onclick=()=>{zoom=Math.min(4,zoom*1.4);layout();};$('zoomout').onclick=()=>{zoom=Math.max(1,zoom/1.4);layout();};$('fit').onclick=()=>{zoom=1;pan={x:0,y:0};layout();};
 let pointers=new Map(),gesture=null,multitouch=false;canvas.oncontextmenu=e=>e.preventDefault();
