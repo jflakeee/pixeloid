@@ -21,3 +21,6 @@ The deployment workflow tests the game and publishes `dist/`. In repository Sett
 
 ## Android plan
 Reuse bundled dist assets with Capacitor; add native app lifecycle/back handling and native durable saves. No Android binary or native wrapper has been built. Verify target SDK and Play requirements at submission. No analytics, ads, external fonts, third-party runtime media or account system are included.
+
+## Version 0.3
+Help → 백업 복원 restores the previous automatic save after confirmation. Invalid or missing backups do not overwrite the current save. Restoration reloads paused. Tests cover corrupt/missing backups and storage write failure.
