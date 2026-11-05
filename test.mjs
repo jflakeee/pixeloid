@@ -53,3 +53,11 @@ for (const mutate of [
 }
 assert.equal(decode(encode(boundaryState)).owned, 12);
 console.log('PASS: purchase cap and malformed progression/device/target rejection.');
+
+const {movePointer}=await import('./dist/input.mjs');
+const pointer={x:0,y:0,startX:0,startY:0,dragged:false};
+movePointer(pointer,3,4);assert.equal(pointer.dragged,false);
+assert.deepEqual(movePointer(pointer,10,0),{x:7,y:-4});
+assert.equal(pointer.dragged,true);
+movePointer(pointer,0,0);assert.equal(pointer.dragged,true);
+console.log('PASS: small tap tolerance and drag-return gesture classification.');
