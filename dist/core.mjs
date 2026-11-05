@@ -33,7 +33,7 @@ export function configure(s,counts){
  s.counts=[...counts];s.balls=[];s.targets=[null,null,null];if(s.started)for(let type=0;type<3;type++)if(counts[type])deploy(s,type);return true;
 }
 export function cost(s){return [40,70,110,160,220,300,400,520,670][s.owned-3]??Infinity;}
-export function buy(s){const c=cost(s);if(s.money<c)return false;s.money-=c;s.owned++;s.counts[s.selected]++;const target=s.targets[s.selected]??s.target;s.targets[s.selected]={...target};if(s.started)s.balls.push(newBall(s,s.selected,target));return true;}
+export function buy(s){const c=cost(s);if(!Number.isFinite(c)||!Number.isFinite(s.money)||s.money<c||![0,1,2].includes(s.selected))return false;s.money-=c;s.owned++;s.counts[s.selected]++;const target=s.targets[s.selected]??s.target;s.targets[s.selected]={...target};if(s.started)s.balls.push(newBall(s,s.selected,target));return true;}
 export function progress(s,d){let removed=0,total=0;for(let y=d.y-3;y<=d.y+3;y++)for(let x=d.x-3;x<=d.x+3;x++){if(Math.max(Math.abs(x-d.x),Math.abs(y-d.y))!==3)continue;total++;if(s.grid[y*W+x]===0)removed++;}return removed/total;}
 export function activate(s,n){const d=s.devices[n];if(d.active){if(n===0)d.dir=(d.dir+1)%4;return false;}if(progress(s,d)<.8)return false;d.active=true;if(n===1)d.charge=30;if(n===2){s.won=true;notify(s,'핵심 유물을 발견했습니다!');}else notify(s,d.name+' 복원 완료');return true;}
 function solid(s,x,y){if(x<1||y<1||x>=W-1||y>=H-1)return true;return s.grid[Math.floor(y)*W+Math.floor(x)]!==0;}
@@ -47,9 +47,26 @@ export function encode(s){return JSON.stringify(s);}
 export function decode(raw){const s=JSON.parse(raw);if(!s||![1,2].includes(s.version)||s.grid?.length!==W*H||s.hp?.length!==W*H||!Array.isArray(s.balls)||s.balls.length>12||!Number.isInteger(s.owned)||s.owned<3||s.owned>12||!Number.isFinite(s.money)||s.money<0||!s.devices||s.devices.length!==3||!s.target||!Number.isFinite(s.target.x)||!Number.isFinite(s.target.y)||!Number.isFinite(s.time)||!Number.isFinite(s.mined)||!Number.isFinite(s.total))throw Error('저장 형식 오류');if(s.grid.some(t=>![0,1,2,3,4].includes(t)))throw Error('지도 오류');for(const b of s.balls)if(![0,1,2].includes(b.type)||![b.x,b.y,b.a,b.cool,b.idle,b.boost].every(Number.isFinite)||b.x<0||b.y<0||b.x>=W||b.y>=H)throw Error('구체 오류');if(!Number.isInteger(s.speed)||s.speed<0||s.speed>3||![0,1,2].includes(s.selected))throw Error('강화 상태 오류');
  if(s.hp.some((v,i)=>s.grid[i]!==4&&(!Number.isFinite(v)||v<0)))throw Error('내구도 오류');
  if(s.devices.some(d=>!d||!Number.isFinite(d.x)||!Number.isFinite(d.y)||typeof d.active!=='boolean'))throw Error('장치 오류');
+ const validTarget = target => target && Number.isFinite(target.x) && Number.isFinite(target.y)
+  && target.x >= 0 && target.x < W && target.y >= 0 && target.y < H;
+ if (!validTarget(s.target) || s.time < 0 || !Number.isInteger(s.total) || s.total <= 0
+  || s.total > W*H || !Number.isInteger(s.mined) || s.mined < 0 || s.mined > s.total) {
+  throw Error('진행 상태 오류');
+ }
+ const initial = fresh();
+ for (const [index, device] of s.devices.entries()) {
+  const expected = initial.devices[index];
+  if (device.x !== expected.x || device.y !== expected.y || device.name !== expected.name) {
+   throw Error('장치 위치 오류');
+  }
+ }
+ if (!Number.isInteger(s.devices[0].dir) || s.devices[0].dir < 0 || s.devices[0].dir > 3
+  || !Number.isInteger(s.devices[1].charge) || s.devices[1].charge < 0 || s.devices[1].charge > 30) {
+  throw Error('장치 상태 오류');
+ }
  if(s.version===1){s.counts=[0,0,0];for(const b of s.balls)s.counts[b.type]++;s.counts[0]+=s.owned-s.balls.length;s.targets=[0,1,2].map(()=>({...s.target}));s.version=2;}
  if(!Array.isArray(s.counts)||s.counts.length!==3||s.counts.some(n=>!Number.isInteger(n)||n<0)||s.counts.reduce((a,b)=>a+b,0)!==s.owned)throw Error('구성 오류');
- if(!Array.isArray(s.targets)||s.targets.length!==3||s.targets.some(t=>t!==null&&(!Number.isFinite(t.x)||!Number.isFinite(t.y))))throw Error('목표 오류');
+ if(!Array.isArray(s.targets)||s.targets.length!==3||s.targets.some(t=>t!==null&&!validTarget(t)))throw Error('목표 오류');
  if(s.started&&s.balls.length!==s.owned)throw Error('구체 수 오류');
  for(let type=0;type<3;type++)if(s.started&&s.balls.filter(b=>b.type===type).length!==s.counts[type])throw Error('유형 수 오류');
  s.hp=s.hp.map((v,i)=>s.grid[i]===4?Infinity:v);s.events=[];return s;}

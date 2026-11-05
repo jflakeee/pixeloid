@@ -31,3 +31,25 @@ assert.throws(()=>resetSave({...storage,setItem(){throw Error('Storage full');}}
 assert.equal(data.get(KEY),preserved);
 assert.throws(()=>restoreBackup(storage,'invalid'));
 console.log('PASS: reset snapshot survives autosave, reset write failure preserves progress.');
+
+const boundaryState = fresh();
+boundaryState.money = 100000;
+while (boundaryState.owned < 12) assert(buy(boundaryState));
+const atLimit = encode(boundaryState);
+assert.equal(buy(boundaryState), false);
+assert.equal(encode(boundaryState), atLimit);
+for (const mutate of [
+ state => state.total = 0,
+ state => state.mined = -1,
+ state => state.time = -1,
+ state => state.target.x = W,
+ state => state.targets[0] = {x:-1,y:10},
+ state => state.devices[0].dir = 4,
+ state => state.devices[1].charge = null,
+ state => state.devices[1].x = 999
+]) {
+ const invalid = fresh(); mutate(invalid);
+ assert.throws(() => decode(encode(invalid)));
+}
+assert.equal(decode(encode(boundaryState)).owned, 12);
+console.log('PASS: purchase cap and malformed progression/device/target rejection.');
