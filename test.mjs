@@ -61,3 +61,15 @@ assert.deepEqual(movePointer(pointer,10,0),{x:7,y:-4});
 assert.equal(pointer.dragged,true);
 movePointer(pointer,0,0);assert.equal(pointer.dragged,true);
 console.log('PASS: small tap tolerance and drag-return gesture classification.');
+
+const {anchoredPan}=await import('./dist/input.mjs');
+const cameraPan={x:20,y:-10}, center={x:200,y:300};
+const anchor={x:130,y:220}, movedAnchor={x:140,y:240};
+const zoomedPan=anchoredPan(cameraPan,center,anchor,movedAnchor,2);
+for(const axis of ['x','y']) {
+ const worldOffset=anchor[axis]-center[axis]-cameraPan[axis];
+ assert.equal(center[axis]+zoomedPan[axis]+worldOffset*2,movedAnchor[axis]);
+}
+assert.deepEqual(anchoredPan(zoomedPan,center,movedAnchor,anchor,.5),cameraPan);
+assert.deepEqual(anchoredPan(cameraPan,center,anchor,movedAnchor,1),{x:30,y:10});
+console.log('PASS: zoom anchor stability, inverse zoom and pinch translation.');
