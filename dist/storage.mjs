@@ -16,3 +16,16 @@ export function resetSave(storage,current){
  storage.setItem(KEY,encode(next));
  return next;
 }
+
+export function saveProgress(storage, state) {
+ const next = encode(state);
+ decode(next);
+ const previous = storage.getItem(KEY);
+ if (previous === next) return false;
+ if (previous) {
+  decode(previous);
+  storage.setItem(KEY+'-backup', previous);
+ }
+ storage.setItem(KEY, next);
+ return true;
+}

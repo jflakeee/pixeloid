@@ -1,10 +1,18 @@
 import {movePointer,anchoredPan} from './input.mjs';
-import {restoreBackup,resetSave} from './storage.mjs';
+import {restoreBackup,resetSave,saveProgress} from './storage.mjs';
 import{W,H,KEY,TYPES,fresh,hit,frontier,deploy,configure,buy,cost,progress,activate,step,encode,decode}from'./core.mjs';
 const $=id=>document.getElementById(id),canvas=$('game'),ctx=canvas.getContext('2d');let s=fresh(),running=false,started=false,selected=0,zoom=1,pan={x:0,y:0},scale=1,ox=0,oy=0,viewW=0,viewH=0,last=0,uiClock=0,saveClock=0,toastClock=0,eventCount='',audio=null,sound=false,hitSoundAt=0,storageBlocked=false,resumeAfterSheet=false,draft=[3,0,0];
 try{const raw=localStorage.getItem(KEY);if(raw){s=decode(raw);started=Boolean(s.started);if(started)$('start').classList.add('hidden');$('pause').textContent='▶';}}catch{storageBlocked=true;$('saveState').textContent='저장 읽기 실패 · 기존 기록을 보존합니다';}
 const terrain=document.createElement('canvas');terrain.width=W*4;terrain.height=H*4;const tc=terrain.getContext('2d');let lastMined=-1;
-function save(){if(storageBlocked)return;try{const previous=localStorage.getItem(KEY);if(previous){try{decode(previous);localStorage.setItem(KEY+'-backup',previous);}catch{storageBlocked=true;return;}}localStorage.setItem(KEY,encode(s));$('saveState').textContent='이 브라우저에 저장됨';}catch{$('saveState').textContent='저장 불가 · 브라우저 저장 공간 확인';}}
+function save() {
+ if (storageBlocked) return;
+ try {
+  saveProgress(localStorage,s);
+  $('saveState').textContent='이 브라우저에 저장됨';
+ } catch {
+  $('saveState').textContent='저장 실패 · 저장 공간 또는 복구 메뉴를 확인하세요';
+ }
+}
 function toast(text){$('toast').textContent=text;$('toast').style.opacity=1;toastClock=3;}
 function tone(){if(!sound||!audio||audio.state!=='running'||s.time-hitSoundAt<.08)return;hitSoundAt=s.time;const o=audio.createOscillator(),g=audio.createGain();o.type='sine';o.frequency.setValueAtTime(260+Math.random()*360,audio.currentTime);g.gain.setValueAtTime(.025,audio.currentTime);g.gain.exponentialRampToValueAtTime(.001,audio.currentTime+.08);o.connect(g);g.connect(audio.destination);o.start();o.stop(audio.currentTime+.08);}
 function renderTerrain(){tc.clearRect(0,0,terrain.width,terrain.height);const colors=['#0b151e','#3d6b60','#9b7250','#5d7f96','#253740'];for(let y=0;y<H;y++)for(let x=0;x<W;x++){const t=s.grid[y*W+x];if(!t)continue;tc.fillStyle=colors[t];tc.fillRect(x*4,y*4,3.6,3.6);if(t===3){tc.fillStyle='#a3cbd3';tc.fillRect(x*4+1,y*4+1,1,1);}if(t===2){tc.fillStyle='#bc9568';tc.fillRect(x*4,y*4,3,1);}}lastMined=s.mined;}

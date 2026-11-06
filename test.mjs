@@ -73,3 +73,23 @@ for(const axis of ['x','y']) {
 assert.deepEqual(anchoredPan(zoomedPan,center,movedAnchor,anchor,.5),cameraPan);
 assert.deepEqual(anchoredPan(cameraPan,center,anchor,movedAnchor,1),{x:30,y:10});
 console.log('PASS: zoom anchor stability, inverse zoom and pinch translation.');
+
+const {saveProgress}=await import('./dist/storage.mjs');
+const saveData=new Map();
+let saveWrites=0;
+const saveStore={getItem:key=>saveData.get(key),setItem(key,value){saveWrites++;saveData.set(key,value);}};
+const saveState=fresh();
+saveProgress(saveStore,saveState);
+const firstSnapshot=saveData.get(KEY);
+saveState.money=10;
+saveProgress(saveStore,saveState);
+assert.equal(saveData.get(KEY+'-backup'),firstSnapshot);
+const writesBeforeRepeat=saveWrites;
+assert.equal(saveProgress(saveStore,saveState),false);
+assert.equal(saveWrites,writesBeforeRepeat);
+assert.equal(saveData.get(KEY+'-backup'),firstSnapshot);
+saveData.set(KEY,'corrupt');
+assert.throws(()=>saveProgress(saveStore,saveState));
+assert.equal(saveData.get(KEY),'corrupt');
+assert.equal(saveData.get(KEY+'-backup'),firstSnapshot);
+console.log('PASS: repeated saves retain prior backup, corrupt saves stay recoverable.');
