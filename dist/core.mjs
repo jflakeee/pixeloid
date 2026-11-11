@@ -70,3 +70,7 @@ export function decode(raw){const s=JSON.parse(raw);if(!s||![1,2].includes(s.ver
  if(s.started&&s.balls.length!==s.owned)throw Error('구체 수 오류');
  for(let type=0;type<3;type++)if(s.started&&s.balls.filter(b=>b.type===type).length!==s.counts[type])throw Error('유형 수 오류');
  s.hp=s.hp.map((v,i)=>s.grid[i]===4?Infinity:v);s.events=[];return s;}
+
+export function readyDevices(state) {
+ return state.devices.filter(device => !device.active && progress(state,device) >= .8);
+}

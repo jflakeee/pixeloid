@@ -93,3 +93,21 @@ assert.throws(()=>saveProgress(saveStore,saveState));
 assert.equal(saveData.get(KEY),'corrupt');
 assert.equal(saveData.get(KEY+'-backup'),firstSnapshot);
 console.log('PASS: repeated saves retain prior backup, corrupt saves stay recoverable.');
+
+const {readyDevices}=await import('./dist/core.mjs');
+const readinessState=fresh();
+const readinessDevice=readinessState.devices[0];
+const ring=[];
+for(let y=readinessDevice.y-3;y<=readinessDevice.y+3;y++){
+ for(let x=readinessDevice.x-3;x<=readinessDevice.x+3;x++){
+  if(Math.max(Math.abs(x-readinessDevice.x),Math.abs(y-readinessDevice.y))===3)ring.push(y*W+x);
+ }
+}
+assert.equal(ring.length,24);
+for(const cell of ring.slice(0,19))readinessState.grid[cell]=0;
+assert.equal(readyDevices(readinessState).length,0);
+readinessState.grid[ring[19]]=0;
+assert.deepEqual(readyDevices(readinessState).map(device=>device.name),['반사판']);
+assert(activate(readinessState,0));
+assert.equal(readyDevices(readinessState).length,0);
+console.log('PASS: restoration readiness threshold and completed-device exclusion.');
