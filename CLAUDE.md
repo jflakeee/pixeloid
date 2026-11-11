@@ -65,6 +65,8 @@ Follow the user's authorized task through implementation and verification. The u
 
 ## Context Management
 
+@MEMORY.md
+
 Read `.claude/docs/context-management.md` on demand — it is a reference, not
 session context. Two of its conventions are load-bearing and cited by name
 elsewhere in the repo, so they are restated here rather than lost:
