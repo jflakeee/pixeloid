@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
+import {createWriterGate} from '../dist/writer-gate.mjs';
 import {fresh,encode,decode,KEY,W,deploy,step} from '../dist/core.mjs';
 import {saveProgress,restoreBackup,resetSave} from '../dist/storage.mjs';
 
@@ -39,6 +40,27 @@ test('P0-19','storage-event guard wired into app without save format changes',()
  assert.match(app,/running=false/);
  assert.match(app,/localStorage\.getItem\(KEY\)!==observedSaveRaw/);
  assert.match(app,/observedSaveRaw=localStorage\.getItem\(KEY\)/);
+});
+test('P0-20','unsupported lock provider fails closed',async()=>{const gate=createWriterGate(undefined,KEY+'-writer');assert.equal(await gate.start(),false);assert.equal(gate.held,false);});
+test('P0-21','exclusive writer lock blocks second tab until released',async()=>{
+ let occupied=false;
+ const locks={async request(name,opts,fn){if(occupied)return fn(null);occupied=true;try{return await fn({name});}finally{occupied=false;}}};
+ const a=createWriterGate(locks,KEY+'-writer'),b=createWriterGate(locks,KEY+'-writer');
+ assert.equal(await a.start(),true);
+ assert.equal(a.held,true);
+ assert.equal(await b.start(),false);
+ assert.equal(b.held,false);
+ a.release();assert.equal(a.held,false);
+ // Allow the async lock callback to finish and relinquish the mock lock.
+ await new Promise(resolve=>setImmediate(resolve));
+ const d=createWriterGate(locks,KEY+'-writer');
+ assert.equal(await d.start(),true);d.release();
+});
+test('P0-22','app requires lock for save, restore and reset',()=>{
+ const app=readFileSync(new URL('../dist/app.mjs',import.meta.url),'utf8');
+ assert.match(app,/if \(storageBlocked \|\| !writerGate\.held\) return/);
+ assert.match(app,/if\(!writerGate\.held\|\|storageBlocked\)throw Error\('read-only'\);restoreBackup/);
+ assert.match(app,/if\(!writerGate\.held\|\|storageBlocked\)throw Error\('read-only'\);s=resetSave/);
 });
 let failed=0;
 for(const {id,description,fn} of tests){try{await fn();console.log(id==='P0-16'?'RISK':'PASS',id,description);}catch(e){failed++;console.error('FAIL',id,description,e);}}
