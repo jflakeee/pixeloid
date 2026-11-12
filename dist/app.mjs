@@ -1,13 +1,21 @@
 import {movePointer,anchoredPan} from './input.mjs';
 import {restoreBackup,resetSave,saveProgress} from './storage.mjs';
 import{W,H,KEY,TYPES,fresh,hit,frontier,deploy,configure,buy,cost,progress,readyDevices,activate,step,encode,decode}from'./core.mjs';
-const $=id=>document.getElementById(id),canvas=$('game'),ctx=canvas.getContext('2d');let s=fresh(),running=false,started=false,selected=0,zoom=1,pan={x:0,y:0},scale=1,ox=0,oy=0,viewW=0,viewH=0,last=0,uiClock=0,saveClock=0,toastClock=0,eventCount='',audio=null,sound=false,hitSoundAt=0,storageBlocked=false,resumeAfterSheet=false,draft=[3,0,0];
-try{const raw=localStorage.getItem(KEY);if(raw){s=decode(raw);started=Boolean(s.started);if(started)$('start').classList.add('hidden');$('pause').textContent='▶';}}catch{storageBlocked=true;$('saveState').textContent='저장 읽기 실패 · 기존 기록을 보존합니다';}
+const $=id=>document.getElementById(id),canvas=$('game'),ctx=canvas.getContext('2d');let s=fresh(),running=false,started=false,selected=0,zoom=1,pan={x:0,y:0},scale=1,ox=0,oy=0,viewW=0,viewH=0,last=0,uiClock=0,saveClock=0,toastClock=0,eventCount='',audio=null,sound=false,hitSoundAt=0,storageBlocked=false,observedSaveRaw=null,resumeAfterSheet=false,draft=[3,0,0];
+try{const raw=localStorage.getItem(KEY);observedSaveRaw=raw;if(raw){s=decode(raw);started=Boolean(s.started);if(started)$('start').classList.add('hidden');$('pause').textContent='▶';}}catch{storageBlocked=true;$('saveState').textContent='저장 읽기 실패 · 기존 기록을 보존합니다';}
 const terrain=document.createElement('canvas');terrain.width=W*4;terrain.height=H*4;const tc=terrain.getContext('2d');let lastMined=-1;
 function save() {
  if (storageBlocked) return;
  try {
+  // Compare against the last snapshot observed by this tab before writing.
+  // This closes the ordinary delayed-storage-event window; it is not an atomic CAS.
+  if(localStorage.getItem(KEY)!==observedSaveRaw){
+   storageBlocked=true;running=false;
+   $('saveState').textContent='다른 탭의 최신 저장 발견 · 이 탭 저장 중지. 새로고침하세요';
+   return;
+  }
   saveProgress(localStorage,s);
+  observedSaveRaw=localStorage.getItem(KEY);
   $('saveState').textContent='이 브라우저에 저장됨';
  } catch {
   $('saveState').textContent='저장 실패 · 저장 공간 또는 복구 메뉴를 확인하세요';
@@ -98,7 +106,7 @@ $('confirmRestore').onclick=()=>{
  location.reload();
 };
 $('reset').onclick=()=>{if($('helpDialog').open){$('helpDialog').addEventListener('close',()=>openSheet('confirmDialog'),{once:true});$('helpDialog').close();}else openSheet('confirmDialog');};
-$('confirmReset').onclick=()=>{try{s=resetSave(localStorage,s);}catch{$('resetError').textContent='저장할 수 없어 초기화를 취소했습니다. 현재 탐사는 유지됩니다.';return;}storageBlocked=false;selected=0;started=false;running=false;resumeAfterSheet=false;lastMined=-1;zoom=1;pan={x:0,y:0};layout();$('start').classList.remove('hidden');document.querySelectorAll('[data-type]').forEach(b=>b.classList.toggle('active',b.dataset.type==='0'));$('confirmDialog').close();$('saveState').textContent='새 탐사를 시작합니다';updateUI();};
+$('confirmReset').onclick=()=>{try{s=resetSave(localStorage,s);}catch{$('resetError').textContent='저장할 수 없어 초기화를 취소했습니다. 현재 탐사는 유지됩니다.';return;}storageBlocked=false;observedSaveRaw=localStorage.getItem(KEY);selected=0;started=false;running=false;resumeAfterSheet=false;lastMined=-1;zoom=1;pan={x:0,y:0};layout();$('start').classList.remove('hidden');document.querySelectorAll('[data-type]').forEach(b=>b.classList.toggle('active',b.dataset.type==='0'));$('confirmDialog').close();$('saveState').textContent='새 탐사를 시작합니다';updateUI();};
 $('sound').onclick=async()=>{sound=!sound;if(sound){try{audio??=new(window.AudioContext||window.webkitAudioContext)();await audio.resume();}catch{sound=false;toast('이 브라우저는 효과음을 지원하지 않아요');}}$('sound').textContent=sound?'소리 켬':'소리 끔';$('sound').setAttribute('aria-pressed',String(sound));};
 $('zoomin').onclick=()=>{zoom=Math.min(4,zoom*1.4);layout();};$('zoomout').onclick=()=>{zoom=Math.max(1,zoom/1.4);layout();};$('fit').onclick=()=>{zoom=1;pan={x:0,y:0};layout();};
 let pointers=new Map(),gesture=null,multitouch=false;canvas.oncontextmenu=e=>e.preventDefault();
