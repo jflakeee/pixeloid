@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
 import {fresh,encode,decode,KEY,W,deploy,step} from '../dist/core.mjs';
 import {saveProgress,restoreBackup,resetSave} from '../dist/storage.mjs';
 
@@ -29,6 +30,14 @@ test('P0-15','quota failure cannot claim save success at API layer (browser UX p
 test('P0-16','KNOWN RISK: two tabs can overwrite newer progress (reproduction only)',()=>{const m=store(),a=fresh();saveProgress(m,a);const b=decode(m.getItem(KEY));a.money=100;saveProgress(m,a);b.money=1;saveProgress(m,b);assert.equal(decode(m.getItem(KEY)).money,1);});
 test('P0-17','pause/save transitions preserve valid progress (dialog/browser pending)',()=>{const m=store(),s=fresh();s.started=true;deploy(s);step(s,1/60);saveProgress(m,s);const r=decode(m.getItem(KEY));assert.equal(r.started,true);assert.equal(r.balls.length,3);});
 test('P0-18','v1/v2 fixtures remain loadable and version unchanged',()=>{const one=decode(raw(oldV1())),two=decode(raw(fresh()));assert.equal(one.version,2);assert.equal(two.version,2);assert.equal(KEY,'pixeloid-demo-v1');});
+// Static integration guard: browser event behavior still needs a real two-tab test.
+test('P0-19','storage-event guard wired into app without save format changes',()=>{
+ const app=readFileSync(new URL('../dist/app.mjs',import.meta.url),'utf8');
+ assert.match(app,/addEventListener\('storage'/);
+ assert.match(app,/event\.key!==KEY/);
+ assert.match(app,/storageBlocked=true/);
+ assert.match(app,/running=false/);
+});
 let failed=0;
 for(const {id,description,fn} of tests){try{await fn();console.log(id==='P0-16'?'RISK':'PASS',id,description);}catch(e){failed++;console.error('FAIL',id,description,e);}}
 console.log(`P0 matrix: ${tests.length-failed}/${tests.length} Node scenarios passed (P0-16 reproduces an UNRESOLVED lost-update risk); browser-only aspects of P0-14..18 remain unverified.`);
