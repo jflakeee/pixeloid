@@ -19,6 +19,7 @@ jobs:
           node --check dist/app.mjs
           node --check dist/input.mjs
           node --check dist/storage.mjs
+          node --check dist/writer-gate.mjs
           node --check tests/p0-persistence.mjs
       - name: Existing regression suite
         run: node test.mjs
