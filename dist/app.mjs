@@ -106,6 +106,17 @@ canvas.addEventListener('pointerdown',e=>{canvas.setPointerCapture(e.pointerId);
 canvas.addEventListener('pointermove',e=>{const p=pointers.get(e.pointerId);if(!p)return;const delta=movePointer(p,e.clientX,e.clientY);if(pointers.size===2){const a=[...pointers.values()],g={distance:Math.hypot(a[1].x-a[0].x,a[1].y-a[0].y),x:(a[0].x+a[1].x)/2,y:(a[0].y+a[1].y)/2};if(gesture){zoomAt(zoom*g.distance/Math.max(gesture.distance,1),gesture,g);}gesture=g;}else if(pointers.size===1&&(p.button===2||(p.button===0&&p.dragged&&zoom>1))){pan.x+=delta.x;pan.y+=delta.y;layout();}});
 function endPointer(e){const p=pointers.get(e.pointerId);if(p&&e.type==='pointerup'&&!multitouch&&!p.dragged&&p.button===0&&Math.hypot(e.clientX-p.startX,e.clientY-p.startY)<10){const r=canvas.getBoundingClientRect();s.target={x:Math.max(1,Math.min(W-2,(e.clientX-r.left-ox)/scale)),y:Math.max(1,Math.min(H-2,(e.clientY-r.top-oy)/scale))};toast('목표 설정 · 보내기를 눌러주세요');save();updateUI();}pointers.delete(e.pointerId);if(pointers.size===0){multitouch=false;gesture=null;}}
 canvas.addEventListener('pointerup',endPointer);canvas.addEventListener('pointercancel',endPointer);canvas.addEventListener('lostpointercapture',endPointer);canvas.addEventListener('wheel',e=>{e.preventDefault();zoomAt(zoom*(e.deltaY<0?1.12:.89),{x:e.clientX,y:e.clientY});},{passive:false});
+// An external tab has changed the primary save. Freeze this tab rather than
+// letting its stale autosave/pagehide overwrite the newer persisted state.
+// This is a best-effort browser guard, not a cross-tab atomic lock.
+window.addEventListener('storage',event=>{
+ if(event.key!==KEY||event.storageArea!==localStorage||event.oldValue===event.newValue)return;
+ storageBlocked=true;
+ running=false;
+ $('saveState').textContent='다른 탭에서 저장 변경 감지 · 이 탭 저장 중지. 새로고침하여 최신 기록을 불러오세요';
+ toast('다른 탭에서 저장했습니다. 이 탭을 새로고침하세요');
+ updateUI();
+});
 window.addEventListener('resize',size);new ResizeObserver(size).observe($('viewport'));document.addEventListener('visibilitychange',()=>{if(document.hidden){pointers.clear();gesture=null;multitouch=false;resumeAfterSheet=false;running=false;save();audio?.suspend();}else updateUI();});window.addEventListener('pagehide',save);
 function frame(t){const dt=Math.min(.05,(t-last)/1000||0);last=t;if(running&&!document.hidden){const before=s.mined;step(s,dt);if(s.mined>before)tone();saveClock+=dt;if(saveClock>10){save();saveClock=0;}const e=s.events.at(-1);if(e&&e.text+e.time!==eventCount){eventCount=e.text+e.time;toast(e.text);}}if(toastClock>0){toastClock-=dt;if(toastClock<=0)$('toast').style.opacity=0;}uiClock+=dt;if(uiClock>.15){updateUI();uiClock=0;}draw();requestAnimationFrame(frame);}
 selected=s.selected||0;document.querySelectorAll('[data-type]').forEach(b=>b.classList.toggle('active',Number(b.dataset.type)===selected));size();updateUI();requestAnimationFrame(frame);
