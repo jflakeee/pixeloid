@@ -37,6 +37,8 @@ test('P0-19','storage-event guard wired into app without save format changes',()
  assert.match(app,/event\.key!==KEY/);
  assert.match(app,/storageBlocked=true/);
  assert.match(app,/running=false/);
+ assert.match(app,/localStorage\.getItem\(KEY\)!==observedSaveRaw/);
+ assert.match(app,/observedSaveRaw=localStorage\.getItem\(KEY\)/);
 });
 let failed=0;
 for(const {id,description,fn} of tests){try{await fn();console.log(id==='P0-16'?'RISK':'PASS',id,description);}catch(e){failed++;console.error('FAIL',id,description,e);}}
