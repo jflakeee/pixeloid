@@ -28,7 +28,7 @@ function save(retry=false) {
    $('saveState').textContent='다른 탭의 최신 저장 발견 · 이 탭 저장 중지. 새로고침하세요';
    return;
   }
-  saveProgress(localStorage,s);
+  saveProgress(localStorage,s,observedSaveRaw);
   observedSaveRaw=encode(s);
   writeFailed=false;storageBlocked=false;
   $('saveState').textContent='이 브라우저에 저장됨';
