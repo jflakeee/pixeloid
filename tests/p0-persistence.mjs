@@ -100,6 +100,11 @@ test('P0-28','external clear event freezes stale writer (static)',()=>{
  assert.ok(app.includes('(event.key!==KEY&&event.key!==null)'));
  assert.ok(app.includes('(event.key!==null&&event.oldValue===event.newValue)'));
 });
+test('P0-29','guarded stale writer cannot overwrite primary or rotate backup',()=>{
+ const m=store(),a=fresh();saveProgress(m,a);const expected=m.getItem(KEY),b=decode(expected);
+ a.money=100;saveProgress(m,a,expected);const prior=m.getItem(KEY),backup=m.getItem(KEY+'-backup'),n=m.writes.length;
+ b.money=1;assert.throws(()=>saveProgress(m,b,expected));assert.equal(m.getItem(KEY),prior);assert.equal(m.getItem(KEY+'-backup'),backup);assert.equal(m.writes.length,n);
+});
 let failed=0;
 for(const {id,description,fn} of tests){try{await fn();console.log(id==='P0-16'?'RISK':'PASS',id,description);}catch(e){failed++;console.error('FAIL',id,description,e);}}
 console.log(`P0 matrix: ${tests.length-failed}/${tests.length} Node scenarios passed (P0-16 reproduces an UNRESOLVED lost-update risk); browser-only aspects of P0-14..18 remain unverified.`);
