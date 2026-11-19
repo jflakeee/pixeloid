@@ -14,6 +14,7 @@ writerGate.start().then(acquired=>{
     $('saveState').textContent='최신 저장 변경 감지 · 여기를 눌러 새로고침하세요';
    }else if(!storageBlocked){$('saveState').textContent='이 탭에서 저장 가능';}
   }catch{storageBlocked=true;running=false;$('saveState').textContent='저장 읽기 실패 · 새로고침 또는 복구 메뉴를 확인하세요';}
+ updateUI();
  }
 });
 
@@ -74,18 +75,21 @@ for(let i=0;i<3;i++)$('device'+i).onclick=()=>{const d=s.devices[i];if(!d.active
 function formatTime(t){return String(Math.floor(t/60)).padStart(2,'0')+':'+String(Math.floor(t%60)).padStart(2,'0');}
 let previousReadyNames = new Set();
 function updateUI(){
+ const canWrite=writerGate.held&&!storageBlocked&&!externalConflict;
+ for(const b of document.querySelectorAll('#play,#pause,#redeploy,#applyConfig,#guideTarget,[data-type]'))b.disabled=!canWrite;
+
  const ready = readyDevices(s);
  const newReady = ready.filter(device => !previousReadyNames.has(device.name));
  previousReadyNames = new Set(ready.map(device => device.name));
  $('deviceShortcut').textContent = ready.length ? '복원 가능 '+ready.length+'개 ↗' : '장치 보기 ↗';
  if(newReady.length) toast(newReady.map(device=>device.name).join(' · ')+' 복원 가능 · 장치 보기를 누르세요');
-$('artifactResult').hidden=!s.won;if(s.won)$('artifactResult').textContent='핵심 유물 발견 완료 · 남은 곳을 계속 발굴할 수 있어요.';$('money').textContent=Math.floor(s.money).toLocaleString();$('balls').textContent=s.owned;$('timer').textContent=formatTime(s.time);const pct=s.mined/s.total*100;$('percent').textContent=pct.toFixed(1)+'%';$('bar').style.width=pct+'%';$('status').textContent=running?'발굴 중':started?'일시정지':'발굴 대기';$('pause').textContent=running?'Ⅱ':'▶';$('pause').setAttribute('aria-label',running?'일시정지':'계속');$('buy').innerHTML=s.owned===12?'최대 구체 보유':`구체 추가 <b>${cost(s)} ✦</b>`;$('buy').disabled=s.money<cost(s);$('redeploy').textContent=s.counts[selected]?TYPES[selected].name+' '+s.counts[selected]+'개 보내기':'구성 변경 · '+TYPES[selected].name+' 0개';for(let i=0;i<3;i++)$('count'+i).textContent=s.counts[i]+'개';$('growthMoney').textContent=Math.floor(s.money).toLocaleString();$('growthType').textContent=TYPES[selected].name;const device=s.devices.find(d=>Math.abs(d.x-s.target.x)<3&&Math.abs(d.y-s.target.y)<3);$('targetName').textContent='선택 · '+(device?device.name:Math.round(s.target.x)+', '+Math.round(s.target.y));
+$('artifactResult').hidden=!s.won;if(s.won)$('artifactResult').textContent='핵심 유물 발견 완료 · 남은 곳을 계속 발굴할 수 있어요.';$('money').textContent=Math.floor(s.money).toLocaleString();$('balls').textContent=s.owned;$('timer').textContent=formatTime(s.time);const pct=s.mined/s.total*100;$('percent').textContent=pct.toFixed(1)+'%';$('bar').style.width=pct+'%';$('status').textContent=running?'발굴 중':started?'일시정지':'발굴 대기';$('pause').textContent=running?'Ⅱ':'▶';$('pause').setAttribute('aria-label',running?'일시정지':'계속');$('buy').innerHTML=s.owned===12?'최대 구체 보유':`구체 추가 <b>${cost(s)} ✦</b>`;$('buy').disabled=!canWrite||s.owned>=12||s.money<cost(s);$('redeploy').textContent=s.counts[selected]?TYPES[selected].name+' '+s.counts[selected]+'개 보내기':'구성 변경 · '+TYPES[selected].name+' 0개';for(let i=0;i<3;i++)$('count'+i).textContent=s.counts[i]+'개';$('growthMoney').textContent=Math.floor(s.money).toLocaleString();$('growthType').textContent=TYPES[selected].name;const device=s.devices.find(d=>Math.abs(d.x-s.target.x)<3&&Math.abs(d.y-s.target.y)<3);$('targetName').textContent='선택 · '+(device?device.name:Math.round(s.target.x)+', '+Math.round(s.target.y));
  const goal=s.targets[selected];
  let assignment='발굴 대기';
  if(started && s.counts[selected] && goal) assignment=(running?'발굴 중':'일시정지')+' · '+TYPES[selected].name+' 목표 '+Math.round(goal.x)+', '+Math.round(goal.y);
  else if(started) assignment=TYPES[selected].name+' · 미배정';
  $('assignedTarget').textContent=assignment;
- const up=[100,250,600][s.speed];$('upgrade').innerHTML=up?`속도 강화 <b>${up} ✦</b>`:'속도 최대';$('upgrade').disabled=!up||s.money<up;for(let i=0;i<3;i++){const d=s.devices[i],p=Math.round(progress(s,d)*100);$('dp'+i).textContent=d.active?'✓':p+'%';$('dstate'+i).textContent=d.active?'복원 완료':'주변 발굴';$('mission'+i).classList.toggle('done',d.active);$('device'+i).textContent=d.active?(i===0?'출구 '+['동','남','서','북'][d.dir]+' · 회전 ↻':i===1?'충전 '+d.charge+'/30':'발견 완료'):p>=80?(i===2?'유물 회수 ✦':'장치 복원 ✦'):'목표로 지정 ↗';$('device'+i).disabled=d.active&&i>0;}}
+ const up=[100,250,600][s.speed];$('upgrade').innerHTML=up?`속도 강화 <b>${up} ✦</b>`:'속도 최대';$('upgrade').disabled=!canWrite||!up||s.money<up;for(let i=0;i<3;i++){const d=s.devices[i],p=Math.round(progress(s,d)*100);$('dp'+i).textContent=d.active?'✓':p+'%';$('dstate'+i).textContent=d.active?'복원 완료':'주변 발굴';$('mission'+i).classList.toggle('done',d.active);$('device'+i).textContent=d.active?(i===0?'출구 '+['동','남','서','북'][d.dir]+' · 회전 ↻':i===1?'충전 '+d.charge+'/30':'발견 완료'):p>=80?(i===2?'유물 회수 ✦':'장치 복원 ✦'):'목표로 지정 ↗';$('device'+i).disabled=!canWrite||(d.active&&i>0);}}
 $('play').onclick=()=>{started=true;s.started=true;running=true;for(let type=0;type<3;type++)deploy(s,type);$('start').classList.add('hidden');toast('지도를 눌러 목표를 바꿔보세요');save();};$('pause').onclick=()=>{if(!started){$('play').click();return;}running=!running;if(running&&sound)audio?.resume();save();updateUI();};
 for(const b of document.querySelectorAll('[data-type]'))b.onclick=()=>{selected=Number(b.dataset.type);s.selected=selected;document.querySelectorAll('[data-type]').forEach(x=>x.classList.toggle('active',x===b));toast(TYPES[selected].name+' 선택 · 다른 구체는 계속 발굴합니다');updateUI();};
 $('redeploy').onclick=()=>{if(!s.counts[selected]){openGrowth();return;}if(!started){$('play').click();return;}deploy(s,selected);toast(TYPES[selected].name+' 구체만 보냈습니다');save();updateUI();};$('buy').onclick=()=>{if(buy(s)){toast('새 구체가 합류했습니다');draft=[...s.counts];renderComposition();save();updateUI();}};$('upgrade').onclick=()=>{const c=[100,250,600][s.speed];if(c&&s.money>=c){s.money-=c;s.speed++;toast('이동 속도 +'+s.speed*15+'%');save();updateUI();}};
@@ -96,7 +100,7 @@ function openSheet(id){
 }
 function closeSheet(dialog){dialog.close();}
 for(const d of document.querySelectorAll('dialog')){
- d.addEventListener('close',()=>{running=Boolean(resumeAfterSheet&&started&&!document.hidden);resumeAfterSheet=false;if(running&&sound)audio?.resume();updateUI();});
+ d.addEventListener('close',()=>{running=Boolean(resumeAfterSheet&&started&&!document.hidden&&writerGate.held&&!storageBlocked&&!externalConflict);resumeAfterSheet=false;if(running&&sound)audio?.resume();updateUI();});
  d.addEventListener('click',e=>{if(e.target===d){const r=d.getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)closeSheet(d);}});
 }
 for(const b of document.querySelectorAll('[data-close]'))b.onclick=()=>closeSheet(b.closest('dialog'));
