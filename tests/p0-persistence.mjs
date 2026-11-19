@@ -62,6 +62,10 @@ test('P0-22','app requires lock for save, restore and reset',()=>{
  assert.match(app,/if\(!writerGate\.held\|\|storageBlocked\)throw Error\('read-only'\);restoreBackup/);
  assert.match(app,/if\(!writerGate\.held\|\|storageBlocked\)throw Error\('read-only'\);s=resetSave/);
 });
+test('P0-23','pagehide flushes save before releasing writer lock (static integration)',()=>{
+ const app=readFileSync(new URL('../dist/app.mjs',import.meta.url),'utf8');
+ assert.ok(app.includes("window.addEventListener('pagehide',event=>{save();if(!event.persisted)writerGate.release();});"));
+});
 let failed=0;
 for(const {id,description,fn} of tests){try{await fn();console.log(id==='P0-16'?'RISK':'PASS',id,description);}catch(e){failed++;console.error('FAIL',id,description,e);}}
 console.log(`P0 matrix: ${tests.length-failed}/${tests.length} Node scenarios passed (P0-16 reproduces an UNRESOLVED lost-update risk); browser-only aspects of P0-14..18 remain unverified.`);
