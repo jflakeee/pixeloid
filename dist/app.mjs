@@ -129,7 +129,7 @@ $('zoomin').onclick=()=>{zoom=Math.min(4,zoom*1.4);layout();};$('zoomout').oncli
 let pointers=new Map(),gesture=null,multitouch=false;canvas.oncontextmenu=e=>e.preventDefault();
 canvas.addEventListener('pointerdown',e=>{canvas.setPointerCapture(e.pointerId);pointers.set(e.pointerId,{x:e.clientX,y:e.clientY,startX:e.clientX,startY:e.clientY,button:e.button,dragged:false});if(pointers.size>1){multitouch=true;const a=[...pointers.values()];gesture={distance:Math.hypot(a[1].x-a[0].x,a[1].y-a[0].y),x:(a[0].x+a[1].x)/2,y:(a[0].y+a[1].y)/2};}});
 canvas.addEventListener('pointermove',e=>{const p=pointers.get(e.pointerId);if(!p)return;const delta=movePointer(p,e.clientX,e.clientY);if(pointers.size===2){const a=[...pointers.values()],g={distance:Math.hypot(a[1].x-a[0].x,a[1].y-a[0].y),x:(a[0].x+a[1].x)/2,y:(a[0].y+a[1].y)/2};if(gesture){zoomAt(zoom*g.distance/Math.max(gesture.distance,1),gesture,g);}gesture=g;}else if(pointers.size===1&&(p.button===2||(p.button===0&&p.dragged&&zoom>1))){pan.x+=delta.x;pan.y+=delta.y;layout();}});
-function endPointer(e){const p=pointers.get(e.pointerId);if(p&&e.type==='pointerup'&&!multitouch&&!p.dragged&&p.button===0&&Math.hypot(e.clientX-p.startX,e.clientY-p.startY)<10){const r=canvas.getBoundingClientRect();s.target={x:Math.max(1,Math.min(W-2,(e.clientX-r.left-ox)/scale)),y:Math.max(1,Math.min(H-2,(e.clientY-r.top-oy)/scale))};toast('목표 설정 · 보내기를 눌러주세요');save();updateUI();}pointers.delete(e.pointerId);if(pointers.size===0){multitouch=false;gesture=null;}}
+function endPointer(e){const p=pointers.get(e.pointerId);if(writerGate.held&&!storageBlocked&&!externalConflict&&p&&e.type==='pointerup'&&!multitouch&&!p.dragged&&p.button===0&&Math.hypot(e.clientX-p.startX,e.clientY-p.startY)<10){const r=canvas.getBoundingClientRect();s.target={x:Math.max(1,Math.min(W-2,(e.clientX-r.left-ox)/scale)),y:Math.max(1,Math.min(H-2,(e.clientY-r.top-oy)/scale))};toast('목표 설정 · 보내기를 눌러주세요');save();updateUI();}pointers.delete(e.pointerId);if(pointers.size===0){multitouch=false;gesture=null;}}
 canvas.addEventListener('pointerup',endPointer);canvas.addEventListener('pointercancel',endPointer);canvas.addEventListener('lostpointercapture',endPointer);canvas.addEventListener('wheel',e=>{e.preventDefault();zoomAt(zoom*(e.deltaY<0?1.12:.89),{x:e.clientX,y:e.clientY});},{passive:false});
 // An external tab has changed the primary save. Freeze this tab rather than
 // letting its stale autosave/pagehide overwrite the newer persisted state.
@@ -153,7 +153,7 @@ window.addEventListener('resize',size);new ResizeObserver(size).observe($('viewp
 const writerActions=new Set(['play','pause','redeploy','buy','upgrade','applyConfig','guideTarget','confirmReset','confirmRestore','device0','device1','device2']);
 document.addEventListener('click',event=>{
  const button=event.target.closest?.('button');
- if(button&&writerActions.has(button.id)&&(!writerGate.held||externalConflict||(storageBlocked&&button.id!=='confirmRestore'&&button.id!=='confirmReset'))){
+ if(button&&(writerActions.has(button.id)||button.hasAttribute('data-type'))&&(!writerGate.held||externalConflict||(storageBlocked&&button.id!=='confirmRestore'&&button.id!=='confirmReset'))){
   event.preventDefault();event.stopImmediatePropagation();
   toast('저장 권한이 없습니다 · 다른 탭을 닫고 새로고침하세요');
  }
