@@ -9,7 +9,7 @@ writerGate.start().then(acquired=>{
  if(!acquired){storageBlocked=true;running=false;$('saveState').textContent=writerGate.available?'다른 탭에서 실행 중 · 이 탭은 읽기 전용입니다':'이 브라우저는 안전한 다중 탭 저장을 지원하지 않습니다 · 저장 중지';updateUI();}
  else if(!storageBlocked){$('saveState').textContent='이 탭에서 저장 가능';}
 });
-window.addEventListener('pagehide',()=>writerGate.release());
+
 const terrain=document.createElement('canvas');terrain.width=W*4;terrain.height=H*4;const tc=terrain.getContext('2d');let lastMined=-1;
 function save() {
  if (storageBlocked || !writerGate.held) return;
@@ -132,6 +132,6 @@ window.addEventListener('storage',event=>{
  toast('다른 탭에서 저장했습니다. 이 탭을 새로고침하세요');
  updateUI();
 });
-window.addEventListener('resize',size);new ResizeObserver(size).observe($('viewport'));document.addEventListener('visibilitychange',()=>{if(document.hidden){pointers.clear();gesture=null;multitouch=false;resumeAfterSheet=false;running=false;save();audio?.suspend();}else updateUI();});window.addEventListener('pagehide',save);
+window.addEventListener('resize',size);new ResizeObserver(size).observe($('viewport'));document.addEventListener('visibilitychange',()=>{if(document.hidden){pointers.clear();gesture=null;multitouch=false;resumeAfterSheet=false;running=false;save();audio?.suspend();}else updateUI();});window.addEventListener('pagehide',event=>{save();if(!event.persisted)writerGate.release();});
 function frame(t){const dt=Math.min(.05,(t-last)/1000||0);last=t;if(running&&!document.hidden){const before=s.mined;step(s,dt);if(s.mined>before)tone();saveClock+=dt;if(saveClock>10){save();saveClock=0;}const e=s.events.at(-1);if(e&&e.text+e.time!==eventCount){eventCount=e.text+e.time;toast(e.text);}}if(toastClock>0){toastClock-=dt;if(toastClock<=0)$('toast').style.opacity=0;}uiClock+=dt;if(uiClock>.15){updateUI();uiClock=0;}draw();requestAnimationFrame(frame);}
 selected=s.selected||0;document.querySelectorAll('[data-type]').forEach(b=>b.classList.toggle('active',Number(b.dataset.type)===selected));size();updateUI();requestAnimationFrame(frame);
