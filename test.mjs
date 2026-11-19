@@ -77,7 +77,7 @@ console.log('PASS: zoom anchor stability, inverse zoom and pinch translation.');
 const {saveProgress}=await import('./dist/storage.mjs');
 const saveData=new Map();
 let saveWrites=0;
-const saveStore={getItem:key=>saveData.get(key),setItem(key,value){saveWrites++;saveData.set(key,value);}};
+const saveStore={getItem:key=>saveData.get(key)??null,setItem(key,value){saveWrites++;saveData.set(key,value);}};
 const saveState=fresh();
 saveProgress(saveStore,saveState,saveStore.getItem(KEY));
 const firstSnapshot=saveData.get(KEY);
