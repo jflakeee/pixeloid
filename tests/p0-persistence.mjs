@@ -113,6 +113,17 @@ test('P0-31','pointer completion rechecks writer permission (static)',()=>{
  const app=readFileSync(new URL('../dist/app.mjs',import.meta.url),'utf8');
  assert.ok(app.includes("if(writerGate.held&&!storageBlocked&&!externalConflict&&p&&e.type==='pointerup'"));
 });
+test('P1-01','selection restoration and accessible state wiring (static)',()=>{
+ const app=readFileSync(new URL('../dist/app.mjs',import.meta.url),'utf8');
+ assert.ok(app.includes('selected=s.selected??0'));
+ assert.ok(app.includes("b.setAttribute('aria-pressed',String(active))"));
+});
+test('P1-02','configuration and restore threshold wiring (static)',()=>{
+ const app=readFileSync(new URL('../dist/app.mjs',import.meta.url),'utf8');
+ assert.ok(app.includes('sum!==s.owned||unchanged'));
+ assert.ok(app.includes('Math.floor(ratio*100)'));
+ assert.ok(app.includes('ratio>=.8?'));
+});
 let failed=0;
 for(const {id,description,fn} of tests){try{await fn();console.log('PASS',id,description);}catch(e){failed++;console.error('FAIL',id,description,e);}}
 console.log(`P0 matrix: ${tests.length-failed}/${tests.length} Node scenarios passed; browser-only aspects of P0-14..18 remain unverified.`);
