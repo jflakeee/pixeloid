@@ -74,7 +74,16 @@ function deviceTarget(n){const d=s.devices[n];s.target={x:d.x,y:d.y};toast(d.nam
 for(let i=0;i<3;i++)$('device'+i).onclick=()=>{const d=s.devices[i];if(!d.active&&progress(s,d)<.8){deviceTarget(i);return;}if(i===0&&d.active){activate(s,i);toast('반사판 출구: '+['동','남','서','북'][d.dir]);}else if(!d.active){activate(s,i);toast(d.name+' 복원 완료');if(i===2){$('artifactResult').hidden=false;$('artifactResult').textContent=`유물 발견 완료 · ${formatTime(s.time)} / ${s.mined.toLocaleString()}셀. 창을 닫고 남은 곳을 발굴할 수 있어요.`;}}save();updateUI();};
 function formatTime(t){return String(Math.floor(t/60)).padStart(2,'0')+':'+String(Math.floor(t%60)).padStart(2,'0');}
 let previousReadyNames = new Set();
+// Derived progress only: no reward or save mutation.
+const milestoneLine=document.createElement('p');
+milestoneLine.className='config-help';
+$('growthType').parentElement.after(milestoneLine);
 function updateUI(){
+ const next=[.1,.25,.5,.75,1].map(p=>Math.ceil(s.total*p)).find(n=>n>s.mined);
+ const milestoneText=next===undefined?'전체 발굴 완료': '다음 이정표까지 '+(next-s.mined).toLocaleString()+'셀';
+ const summary=s.mined.toLocaleString()+' / '+s.total.toLocaleString()+'셀 · '+milestoneText;
+ if(milestoneLine.textContent!==summary)milestoneLine.textContent=summary;
+ $('percent').title=summary;
  for(const b of document.querySelectorAll('[data-type]')){const active=Number(b.dataset.type)===selected;b.classList.toggle('active',active);b.setAttribute('aria-pressed',String(active));}
 
  const canWrite=writerGate.held&&!storageBlocked&&!externalConflict;
