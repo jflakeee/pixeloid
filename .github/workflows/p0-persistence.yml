@@ -21,6 +21,11 @@ jobs:
           node --check dist/storage.mjs
           node --check dist/writer-gate.mjs
           node --check tests/p0-persistence.mjs
+          node --check dist/region-prototype.mjs
+          node --check dist/world-prototype.mjs
+          node --check dist/excavation-prototype.mjs
+          node --check dist/world-store-prototype.mjs
+          node --check tests/p2-world-store-browser.mjs
       - name: Existing regression suite
         run: node test.mjs
       - name: P0 failure injection suite
@@ -36,6 +41,7 @@ jobs:
           trap 'kill "$server" || true' EXIT
           for i in $(seq 1 30); do curl -fsS http://127.0.0.1:8765/ >/dev/null && break; sleep 1; done
           node tests/p0-browser.mjs
+          node tests/p2-world-store-browser.mjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:
