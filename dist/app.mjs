@@ -6,7 +6,7 @@ const $=id=>document.getElementById(id),canvas=$('game'),ctx=canvas.getContext('
 try{const raw=localStorage.getItem(KEY);observedSaveRaw=raw;if(raw){s=decode(raw);started=Boolean(s.started);if(started)$('start').classList.add('hidden');$('pause').textContent='▶';}}catch{storageBlocked=true;$('saveState').textContent='저장 읽기 실패 · 기존 기록을 보존합니다';}
 const writerGate=createWriterGate(navigator.locks,KEY+'-writer');
 writerGate.start().then(acquired=>{
- if(!acquired){storageBlocked=true;running=false;$('saveState').textContent=writerGate.available?'다른 탭에서 실행 중 · 이 탭은 읽기 전용입니다':'이 브라우저는 안전한 다중 탭 저장을 지원하지 않습니다 · 저장 중지';updateUI();}
+ if(!acquired){storageBlocked=true;running=false;$('saveState').textContent=writerGate.available?'다른 탭에서 실행 중 · 종료 후 여기를 눌러 새로고침하세요':'이 브라우저는 안전한 다중 탭 저장을 지원하지 않습니다 · 저장 중지';updateUI();}
  else if(!storageBlocked){$('saveState').textContent='이 탭에서 저장 가능';}
 });
 
@@ -132,6 +132,10 @@ window.addEventListener('storage',event=>{
  $('saveState').textContent='다른 탭에서 저장 변경 감지 · 이 탭 저장 중지. 새로고침하여 최신 기록을 불러오세요';
  toast('다른 탭에서 저장했습니다. 이 탭을 새로고침하세요');
  updateUI();
+});
+// Retry explicitly by reloading: never promote a stale in-memory state.
+$('saveState').addEventListener('click',()=>{
+ if(!writerGate.held||externalConflict)location.reload();
 });
 window.addEventListener('resize',size);new ResizeObserver(size).observe($('viewport'));document.addEventListener('visibilitychange',()=>{if(document.hidden){pointers.clear();gesture=null;multitouch=false;resumeAfterSheet=false;running=false;save();audio?.suspend();}else updateUI();});window.addEventListener('pagehide',event=>{save();if(!event.persisted)writerGate.release();});
 // Deny gameplay mutations in tabs without the exclusive writer lock.
