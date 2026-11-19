@@ -39,7 +39,7 @@ test('P0-19','storage-event guard wired into app without save format changes',()
  assert.match(app,/storageBlocked=true/);
  assert.match(app,/running=false/);
  assert.match(app,/localStorage\.getItem\(KEY\)!==observedSaveRaw/);
- assert.match(app,/observedSaveRaw=localStorage\.getItem\(KEY\)/);
+ assert.match(app,/observedSaveRaw=encode\(s\)/);
 });
 test('P0-20','unsupported lock provider fails closed',async()=>{const gate=createWriterGate(undefined,KEY+'-writer');assert.equal(await gate.start(),false);assert.equal(gate.held,false);});
 test('P0-21','exclusive writer lock blocks second tab until released',async()=>{
@@ -58,7 +58,7 @@ test('P0-21','exclusive writer lock blocks second tab until released',async()=>{
 });
 test('P0-22','app requires lock for save, restore and reset',()=>{
  const app=readFileSync(new URL('../dist/app.mjs',import.meta.url),'utf8');
- assert.match(app,/if \(storageBlocked \|\| !writerGate\.held\) return/);
+ assert.ok(app.includes('if ((storageBlocked && !(retry===true&&writeFailed&&!externalConflict)) || !writerGate.held) return;'));
  assert.match(app,/if\(!writerGate\.held\|\|externalConflict\|\|localStorage\.getItem\(KEY\)!==observedSaveRaw\)throw Error\('read-only'\);restoreBackup/);
  assert.match(app,/if\(!writerGate\.held\|\|externalConflict\|\|localStorage\.getItem\(KEY\)!==observedSaveRaw\)throw Error\('read-only'\);s=resetSave/);
 });
@@ -70,6 +70,24 @@ test('P0-24','explicit reload reacquisition avoids promoting stale state',()=>{
  const app=readFileSync(new URL('../dist/app.mjs',import.meta.url),'utf8');
  assert.ok(app.includes("if(!writerGate.held||externalConflict)location.reload();"));
  assert.ok(app.includes("running&&writerGate.held&&!storageBlocked&&!document.hidden"));
+});
+test('P0-25','retry after backup or primary write failure retains live progress',()=>{
+ for(const failAt of [1,2]){
+  const prior=fresh(),live=fresh();live.money=87;
+  const m=store([[KEY,raw(prior)]],failAt);
+  assert.throws(()=>saveProgress(m,live));
+  assert.equal(m.getItem(KEY),raw(prior));
+  assert.equal(live.money,87);
+  assert.equal(saveProgress(m,live),true);
+  assert.equal(decode(m.getItem(KEY)).money,87);
+  assert.equal(m.getItem(KEY+'-backup'),raw(prior));
+ }
+});
+test('P0-26','app pauses on failed save and exposes explicit retry (static integration)',()=>{
+ const app=readFileSync(new URL('../dist/app.mjs',import.meta.url),'utf8');
+ assert.ok(app.includes('writeFailed=true;storageBlocked=true;running=false;resumeAfterSheet=false;'));
+ assert.ok(app.includes('else if(writeFailed)save(true);'));
+ assert.ok(app.includes('writeFailed=false;storageBlocked=false;'));
 });
 let failed=0;
 for(const {id,description,fn} of tests){try{await fn();console.log(id==='P0-16'?'RISK':'PASS',id,description);}catch(e){failed++;console.error('FAIL',id,description,e);}}
