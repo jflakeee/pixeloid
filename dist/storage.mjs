@@ -21,7 +21,7 @@ export function saveProgress(storage, state, expectedRaw) {
  const next = encode(state);
  decode(next);
  const previous = storage.getItem(KEY);
- if (expectedRaw !== undefined && previous !== expectedRaw) throw Error('저장 충돌');
+ if (expectedRaw === undefined || previous !== expectedRaw) throw Error('저장 충돌');
  if (previous === next) return false;
  if (previous) {
   decode(previous);
