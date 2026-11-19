@@ -89,6 +89,17 @@ test('P0-26','app pauses on failed save and exposes explicit retry (static integ
  assert.ok(app.includes('else if(writeFailed)save(true);'));
  assert.ok(app.includes('writeFailed=false;storageBlocked=false;'));
 });
+test('P0-27','startup rechecks persisted snapshot after acquiring lock (static)',()=>{
+ const app=readFileSync(new URL('../dist/app.mjs',import.meta.url),'utf8');
+ const startup=app.slice(app.indexOf('writerGate.start().then'),app.indexOf('const terrain='));
+ assert.ok(startup.includes('localStorage.getItem(KEY)!==observedSaveRaw'));
+ assert.ok(startup.includes('externalConflict=true;storageBlocked=true;running=false;'));
+});
+test('P0-28','external clear event freezes stale writer (static)',()=>{
+ const app=readFileSync(new URL('../dist/app.mjs',import.meta.url),'utf8');
+ assert.ok(app.includes('(event.key!==KEY&&event.key!==null)'));
+ assert.ok(app.includes('(event.key!==null&&event.oldValue===event.newValue)'));
+});
 let failed=0;
 for(const {id,description,fn} of tests){try{await fn();console.log(id==='P0-16'?'RISK':'PASS',id,description);}catch(e){failed++;console.error('FAIL',id,description,e);}}
 console.log(`P0 matrix: ${tests.length-failed}/${tests.length} Node scenarios passed (P0-16 reproduces an UNRESOLVED lost-update risk); browser-only aspects of P0-14..18 remain unverified.`);
