@@ -78,7 +78,9 @@ function updateUI(){
  for(const b of document.querySelectorAll('[data-type]')){const active=Number(b.dataset.type)===selected;b.classList.toggle('active',active);b.setAttribute('aria-pressed',String(active));}
 
  const canWrite=writerGate.held&&!storageBlocked&&!externalConflict;
- for(const b of document.querySelectorAll('#play,#pause,#redeploy,#applyConfig,#guideTarget,[data-type]'))b.disabled=!canWrite;
+ for(const b of document.querySelectorAll('#play,#pause,#redeploy,#guideTarget,[data-type]'))b.disabled=!canWrite;
+ $('applyConfig').disabled=!canWrite||draft.reduce((a,b)=>a+b,0)!==s.owned||draft.every((n,i)=>n===s.counts[i]);
+ for(const b of document.querySelectorAll('[data-adjust]')){const [i,n]=b.dataset.adjust.split(',').map(Number);b.disabled=!canWrite||(n<0?draft[i]===0:draft.reduce((a,b)=>a+b,0)>=s.owned);}
 
  const ready = readyDevices(s);
  const newReady = ready.filter(device => !previousReadyNames.has(device.name));
@@ -108,8 +110,8 @@ for(const d of document.querySelectorAll('dialog')){
 for(const b of document.querySelectorAll('[data-close]'))b.onclick=()=>closeSheet(b.closest('dialog'));
 function renderComposition(){
  $('composition').innerHTML=TYPES.map((t,i)=>`<div class="config-row"><i class="orb" style="background:${t.color}"></i><b>${t.name}</b><button data-adjust="${i},-1" aria-label="${t.name} 줄이기" ${draft[i]===0?'disabled':''}>−</button><output>${draft[i]}</output><button data-adjust="${i},1" aria-label="${t.name} 늘리기" ${draft.reduce((a,b)=>a+b,0)>=s.owned?'disabled':''}>+</button></div>`).join('');
- const sum=draft.reduce((a,b)=>a+b,0);$('configTotal').textContent=`배정 ${sum} / 보유 ${s.owned}개`;$('applyConfig').disabled=sum!==s.owned;
- for(const b of document.querySelectorAll('[data-adjust]'))b.onclick=()=>{const [i,n]=b.dataset.adjust.split(',').map(Number);draft[i]+=n;renderComposition();};
+ const sum=draft.reduce((a,b)=>a+b,0);const unchanged=draft.every((n,i)=>n===s.counts[i]);$('configTotal').textContent=`배정 ${sum} / 보유 ${s.owned}개 · ${sum<s.owned?'미배정 '+(s.owned-sum)+'개':unchanged?'변경 없음':'적용 가능'}`;$('applyConfig').disabled=!writerGate.held||storageBlocked||externalConflict||sum!==s.owned||unchanged;
+ for(const b of document.querySelectorAll('[data-adjust]'))b.onclick=()=>{const [i,n]=b.dataset.adjust.split(',').map(Number);if(!writerGate.held||storageBlocked||externalConflict)return;if(n<0?draft[i]<=0:draft.reduce((a,b)=>a+b,0)>=s.owned)return;draft[i]+=n;renderComposition();};
 }
 function openGrowth(){draft=[...s.counts];renderComposition();openSheet('growthDialog');}
 $('openGrowth').onclick=openGrowth;$('openDevices').onclick=()=>openSheet('devicesDialog');
