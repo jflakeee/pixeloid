@@ -2,7 +2,7 @@ import {movePointer,anchoredPan} from './input.mjs';
 import {createWriterGate} from './writer-gate.mjs';
 import {restoreBackup,resetSave,saveProgress} from './storage.mjs';
 import{W,H,KEY,TYPES,fresh,hit,frontier,deploy,configure,buy,cost,progress,readyDevices,activate,step,encode,decode}from'./core.mjs';
-const $=id=>document.getElementById(id),canvas=$('game'),ctx=canvas.getContext('2d');let s=fresh(),running=false,started=false,selected=0,zoom=1,pan={x:0,y:0},scale=1,ox=0,oy=0,viewW=0,viewH=0,last=0,uiClock=0,saveClock=0,toastClock=0,eventCount='',audio=null,sound=false,hitSoundAt=0,storageBlocked=false,observedSaveRaw=null,resumeAfterSheet=false,draft=[3,0,0];
+const $=id=>document.getElementById(id),canvas=$('game'),ctx=canvas.getContext('2d');let s=fresh(),running=false,started=false,selected=0,zoom=1,pan={x:0,y:0},scale=1,ox=0,oy=0,viewW=0,viewH=0,last=0,uiClock=0,saveClock=0,toastClock=0,eventCount='',audio=null,sound=false,hitSoundAt=0,storageBlocked=false,observedSaveRaw=null,externalConflict=false,resumeAfterSheet=false,draft=[3,0,0];
 try{const raw=localStorage.getItem(KEY);observedSaveRaw=raw;if(raw){s=decode(raw);started=Boolean(s.started);if(started)$('start').classList.add('hidden');$('pause').textContent='▶';}}catch{storageBlocked=true;$('saveState').textContent='저장 읽기 실패 · 기존 기록을 보존합니다';}
 const writerGate=createWriterGate(navigator.locks,KEY+'-writer');
 writerGate.start().then(acquired=>{
@@ -17,7 +17,7 @@ function save() {
   // Compare against the last snapshot observed by this tab before writing.
   // This closes the ordinary delayed-storage-event window; it is not an atomic CAS.
   if(localStorage.getItem(KEY)!==observedSaveRaw){
-   storageBlocked=true;running=false;
+   storageBlocked=true;externalConflict=true;running=false;
    $('saveState').textContent='다른 탭의 최신 저장 발견 · 이 탭 저장 중지. 새로고침하세요';
    return;
   }
@@ -108,12 +108,12 @@ function requestRestore(source){
 $('restoreBackup').onclick=()=>requestRestore('backup');
 $('restoreReset').onclick=()=>requestRestore('before-reset');
 $('confirmRestore').onclick=()=>{
- try{if(!writerGate.held||storageBlocked)throw Error('read-only');restoreBackup(localStorage,restoreSource);}catch{ $('restoreError').textContent='복원하지 못했습니다. 정상 백업이 없거나 저장 공간을 사용할 수 없습니다. 현재 기록은 유지됩니다.';return; }
+ try{if(!writerGate.held||externalConflict||localStorage.getItem(KEY)!==observedSaveRaw)throw Error('read-only');restoreBackup(localStorage,restoreSource);}catch{ $('restoreError').textContent='복원하지 못했습니다. 정상 백업이 없거나 저장 공간을 사용할 수 없습니다. 현재 기록은 유지됩니다.';return; }
  storageBlocked=true; // Prevent pagehide from replacing the restored save.
  location.reload();
 };
 $('reset').onclick=()=>{if($('helpDialog').open){$('helpDialog').addEventListener('close',()=>openSheet('confirmDialog'),{once:true});$('helpDialog').close();}else openSheet('confirmDialog');};
-$('confirmReset').onclick=()=>{try{if(!writerGate.held||storageBlocked)throw Error('read-only');s=resetSave(localStorage,s);}catch{$('resetError').textContent='저장할 수 없어 초기화를 취소했습니다. 현재 탐사는 유지됩니다.';return;}storageBlocked=false;observedSaveRaw=localStorage.getItem(KEY);selected=0;started=false;running=false;resumeAfterSheet=false;lastMined=-1;zoom=1;pan={x:0,y:0};layout();$('start').classList.remove('hidden');document.querySelectorAll('[data-type]').forEach(b=>b.classList.toggle('active',b.dataset.type==='0'));$('confirmDialog').close();$('saveState').textContent='새 탐사를 시작합니다';updateUI();};
+$('confirmReset').onclick=()=>{try{if(!writerGate.held||externalConflict||localStorage.getItem(KEY)!==observedSaveRaw)throw Error('read-only');s=resetSave(localStorage,s);}catch{$('resetError').textContent='저장할 수 없어 초기화를 취소했습니다. 현재 탐사는 유지됩니다.';return;}storageBlocked=false;observedSaveRaw=localStorage.getItem(KEY);selected=0;started=false;running=false;resumeAfterSheet=false;lastMined=-1;zoom=1;pan={x:0,y:0};layout();$('start').classList.remove('hidden');document.querySelectorAll('[data-type]').forEach(b=>b.classList.toggle('active',b.dataset.type==='0'));$('confirmDialog').close();$('saveState').textContent='새 탐사를 시작합니다';updateUI();};
 $('sound').onclick=async()=>{sound=!sound;if(sound){try{audio??=new(window.AudioContext||window.webkitAudioContext)();await audio.resume();}catch{sound=false;toast('이 브라우저는 효과음을 지원하지 않아요');}}$('sound').textContent=sound?'소리 켬':'소리 끔';$('sound').setAttribute('aria-pressed',String(sound));};
 $('zoomin').onclick=()=>{zoom=Math.min(4,zoom*1.4);layout();};$('zoomout').onclick=()=>{zoom=Math.max(1,zoom/1.4);layout();};$('fit').onclick=()=>{zoom=1;pan={x:0,y:0};layout();};
 let pointers=new Map(),gesture=null,multitouch=false;canvas.oncontextmenu=e=>e.preventDefault();
@@ -127,6 +127,7 @@ canvas.addEventListener('pointerup',endPointer);canvas.addEventListener('pointer
 window.addEventListener('storage',event=>{
  if(event.key!==KEY||event.storageArea!==localStorage||event.oldValue===event.newValue)return;
  storageBlocked=true;
+ externalConflict=true;
  running=false;
  $('saveState').textContent='다른 탭에서 저장 변경 감지 · 이 탭 저장 중지. 새로고침하여 최신 기록을 불러오세요';
  toast('다른 탭에서 저장했습니다. 이 탭을 새로고침하세요');
@@ -137,13 +138,13 @@ window.addEventListener('resize',size);new ResizeObserver(size).observe($('viewp
 const writerActions=new Set(['play','pause','redeploy','buy','upgrade','applyConfig','guideTarget','confirmReset','confirmRestore','device0','device1','device2']);
 document.addEventListener('click',event=>{
  const button=event.target.closest?.('button');
- if(button&&writerActions.has(button.id)&&!writerGate.held){
+ if(button&&writerActions.has(button.id)&&(!writerGate.held||externalConflict||(storageBlocked&&button.id!=='confirmRestore'&&button.id!=='confirmReset'))){
   event.preventDefault();event.stopImmediatePropagation();
   toast('저장 권한이 없습니다 · 다른 탭을 닫고 새로고침하세요');
  }
 },true);
 canvas.addEventListener('pointerdown',event=>{
- if(!writerGate.held){event.preventDefault();event.stopImmediatePropagation();}
+ if(!writerGate.held||storageBlocked){event.preventDefault();event.stopImmediatePropagation();}
 },true);
-function frame(t){const dt=Math.min(.05,(t-last)/1000||0);last=t;if(running&&!document.hidden){const before=s.mined;step(s,dt);if(s.mined>before)tone();saveClock+=dt;if(saveClock>10){save();saveClock=0;}const e=s.events.at(-1);if(e&&e.text+e.time!==eventCount){eventCount=e.text+e.time;toast(e.text);}}if(toastClock>0){toastClock-=dt;if(toastClock<=0)$('toast').style.opacity=0;}uiClock+=dt;if(uiClock>.15){updateUI();uiClock=0;}draw();requestAnimationFrame(frame);}
+function frame(t){const dt=Math.min(.05,(t-last)/1000||0);last=t;if(running&&writerGate.held&&!storageBlocked&&!document.hidden){const before=s.mined;step(s,dt);if(s.mined>before)tone();saveClock+=dt;if(saveClock>10){save();saveClock=0;}const e=s.events.at(-1);if(e&&e.text+e.time!==eventCount){eventCount=e.text+e.time;toast(e.text);}}if(toastClock>0){toastClock-=dt;if(toastClock<=0)$('toast').style.opacity=0;}uiClock+=dt;if(uiClock>.15){updateUI();uiClock=0;}draw();requestAnimationFrame(frame);}
 selected=s.selected||0;document.querySelectorAll('[data-type]').forEach(b=>b.classList.toggle('active',Number(b.dataset.type)===selected));size();updateUI();requestAnimationFrame(frame);
