@@ -7,7 +7,14 @@ try{const raw=localStorage.getItem(KEY);observedSaveRaw=raw;if(raw){s=decode(raw
 const writerGate=createWriterGate(navigator.locks,KEY+'-writer');
 writerGate.start().then(acquired=>{
  if(!acquired){storageBlocked=true;running=false;$('saveState').textContent=writerGate.available?'다른 탭에서 실행 중 · 종료 후 여기를 눌러 새로고침하세요':'이 브라우저는 안전한 다중 탭 저장을 지원하지 않습니다 · 저장 중지';updateUI();}
- else if(!storageBlocked){$('saveState').textContent='이 탭에서 저장 가능';}
+ else {
+  try {
+   if(localStorage.getItem(KEY)!==observedSaveRaw){
+    externalConflict=true;storageBlocked=true;running=false;
+    $('saveState').textContent='최신 저장 변경 감지 · 여기를 눌러 새로고침하세요';
+   }else if(!storageBlocked){$('saveState').textContent='이 탭에서 저장 가능';}
+  }catch{storageBlocked=true;running=false;$('saveState').textContent='저장 읽기 실패 · 새로고침 또는 복구 메뉴를 확인하세요';}
+ }
 });
 
 const terrain=document.createElement('canvas');terrain.width=W*4;terrain.height=H*4;const tc=terrain.getContext('2d');let lastMined=-1;
@@ -128,7 +135,7 @@ canvas.addEventListener('pointerup',endPointer);canvas.addEventListener('pointer
 // letting its stale autosave/pagehide overwrite the newer persisted state.
 // This is a best-effort browser guard, not a cross-tab atomic lock.
 window.addEventListener('storage',event=>{
- if(event.key!==KEY||event.storageArea!==localStorage||event.oldValue===event.newValue)return;
+ if((event.key!==KEY&&event.key!==null)||event.storageArea!==localStorage||(event.key!==null&&event.oldValue===event.newValue))return;
  storageBlocked=true;
  externalConflict=true;
  running=false;
