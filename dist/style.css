@@ -10,3 +10,8 @@
 .save-line{flex-wrap:wrap;gap:8px}.save-line button{min-height:44px}
 
 .target-details{display:grid;gap:3px}.target-details small{color:var(--muted);font-size:11px}
+
+/* P1-03: keep the save banner in the layout, including landscape. */
+.save-status{flex:none;width:100%;min-height:44px;white-space:normal;text-align:left;font-size:11px;padding:6px 12px;line-height:1.4;border-radius:0}
+@media(max-width:800px){.field-top{gap:10px}.field-top>div{min-width:0}.excavation{flex:1;min-width:64px}.type span{min-width:0}.type small{overflow-wrap:anywhere}}
+@media(max-height:500px) and (orientation:landscape){.field{grid-template-rows:auto 44px minmax(0,1fr)}.save-status{grid-column:1/-1;grid-row:1}.field-top{grid-row:2}.canvas-wrap{grid-row:3}.target-strip{grid-row:2;min-height:44px}.arsenal{grid-row:3;min-height:0;overflow:auto;justify-content:safe center}.type{min-height:44px}.arsenal .actions>button{min-height:44px}}
