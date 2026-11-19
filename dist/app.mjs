@@ -133,5 +133,17 @@ window.addEventListener('storage',event=>{
  updateUI();
 });
 window.addEventListener('resize',size);new ResizeObserver(size).observe($('viewport'));document.addEventListener('visibilitychange',()=>{if(document.hidden){pointers.clear();gesture=null;multitouch=false;resumeAfterSheet=false;running=false;save();audio?.suspend();}else updateUI();});window.addEventListener('pagehide',event=>{save();if(!event.persisted)writerGate.release();});
+// Deny gameplay mutations in tabs without the exclusive writer lock.
+const writerActions=new Set(['play','pause','redeploy','buy','upgrade','applyConfig','guideTarget','confirmReset','confirmRestore','device0','device1','device2']);
+document.addEventListener('click',event=>{
+ const button=event.target.closest?.('button');
+ if(button&&writerActions.has(button.id)&&!writerGate.held){
+  event.preventDefault();event.stopImmediatePropagation();
+  toast('저장 권한이 없습니다 · 다른 탭을 닫고 새로고침하세요');
+ }
+},true);
+canvas.addEventListener('pointerdown',event=>{
+ if(!writerGate.held){event.preventDefault();event.stopImmediatePropagation();}
+},true);
 function frame(t){const dt=Math.min(.05,(t-last)/1000||0);last=t;if(running&&!document.hidden){const before=s.mined;step(s,dt);if(s.mined>before)tone();saveClock+=dt;if(saveClock>10){save();saveClock=0;}const e=s.events.at(-1);if(e&&e.text+e.time!==eventCount){eventCount=e.text+e.time;toast(e.text);}}if(toastClock>0){toastClock-=dt;if(toastClock<=0)$('toast').style.opacity=0;}uiClock+=dt;if(uiClock>.15){updateUI();uiClock=0;}draw();requestAnimationFrame(frame);}
 selected=s.selected||0;document.querySelectorAll('[data-type]').forEach(b=>b.classList.toggle('active',Number(b.dataset.type)===selected));size();updateUI();requestAnimationFrame(frame);
