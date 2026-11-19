@@ -18,18 +18,18 @@ test('P0-02','v1 migration',()=>{const s=oldV1(),r=decode(raw(s));assert.equal(r
 test('P0-03','corrupt JSON or shape cannot replace valid save',()=>{const s=store([[KEY,raw(fresh())],[KEY+'-backup','{broken']]);const prior=s.data.get(KEY);assert.throws(()=>decode('{'));assert.throws(()=>decode('{}'));assert.throws(()=>restoreBackup(s));assert.equal(s.data.get(KEY),prior);});
 test('P0-04','progress bounds and target rejection',()=>{for(const fn of [s=>s.money=-1,s=>s.time=-1,s=>s.total=0,s=>s.mined=s.total+1,s=>s.target.x=W,s=>s.money=NaN]){const s=fresh();fn(s);assert.throws(()=>decode(raw(s)));}});
 test('P0-05','invalid devices, balls, counts rejected',()=>{for(const fn of [s=>s.devices[0].x=999,s=>s.devices[1].charge=31,s=>s.counts=[1,1,0],s=>s.balls=[{type:99,x:1,y:1,a:0,cool:0,idle:0,boost:0}]]){const s=fresh();fn(s);assert.throws(()=>decode(raw(s)));}});
-test('P0-06','identical save does not rotate backup',()=>{const s=fresh(),m=store();assert.equal(saveProgress(m,s),true);const n=m.writes.length;assert.equal(saveProgress(m,s),false);assert.equal(m.writes.length,n);});
-test('P0-07','backup write failure leaves primary and backup intact',()=>{const p=raw(fresh()),m=store([[KEY,p],[KEY+'-backup',p]],1),s=fresh();s.money=8;assert.throws(()=>saveProgress(m,s));assert.equal(m.data.get(KEY),p);assert.equal(m.data.get(KEY+'-backup'),p);});
-test('P0-08','primary write failure preserves primary; backup is prior primary',()=>{const p=raw(fresh()),m=store([[KEY,p]],2),s=fresh();s.money=8;assert.throws(()=>saveProgress(m,s));assert.equal(m.data.get(KEY),p);assert.equal(m.data.get(KEY+'-backup'),p);});
+test('P0-06','identical save does not rotate backup',()=>{const s=fresh(),m=store();assert.equal(saveProgress(m,s,m.getItem(KEY)),true);const n=m.writes.length;assert.equal(saveProgress(m,s,m.getItem(KEY)),false);assert.equal(m.writes.length,n);});
+test('P0-07','backup write failure leaves primary and backup intact',()=>{const p=raw(fresh()),m=store([[KEY,p],[KEY+'-backup',p]],1),s=fresh();s.money=8;assert.throws(()=>saveProgress(m,s,m.getItem(KEY)));assert.equal(m.data.get(KEY),p);assert.equal(m.data.get(KEY+'-backup'),p);});
+test('P0-08','primary write failure preserves primary; backup is prior primary',()=>{const p=raw(fresh()),m=store([[KEY,p]],2),s=fresh();s.money=8;assert.throws(()=>saveProgress(m,s,m.getItem(KEY)));assert.equal(m.data.get(KEY),p);assert.equal(m.data.get(KEY+'-backup'),p);});
 test('P0-09','missing and invalid backups never replace primary',()=>{const p=raw(fresh()),m=store([[KEY,p]]);assert.throws(()=>restoreBackup(m));m.data.set(KEY+'-backup','broken');assert.throws(()=>restoreBackup(m));assert.equal(m.data.get(KEY),p);});
 test('P0-10','restore write failure retains current and backup',()=>{const p=raw(fresh()),b=fresh();b.money=77;const m=store([[KEY,p],[KEY+'-backup',raw(b)]],1);assert.throws(()=>restoreBackup(m));assert.equal(m.data.get(KEY),p);assert.equal(decode(m.data.get(KEY+'-backup')).money,77);});
 test('P0-11','reset snapshot write failure leaves live state intact',()=>{const s=fresh();s.money=45;const p=raw(s),m=store([[KEY,p]],1);assert.throws(()=>resetSave(m,s));assert.equal(m.data.get(KEY),p);assert.equal(raw(s),p);});
 test('P0-12','reset primary write failure preserves valid primary',()=>{const s=fresh();s.money=45;const p=raw(s),m=store([[KEY,p]],2);assert.throws(()=>resetSave(m,s));assert.equal(m.data.get(KEY),p);assert.equal(decode(m.data.get(KEY+'-before-reset')).money,45);assert.equal(raw(s),p);});
-test('P0-13','before-reset survives autosave rotation',()=>{const s=fresh();s.money=99;const m=store([[KEY,raw(s)]]);const reset=resetSave(m,s);reset.money=5;saveProgress(m,reset);assert.equal(restoreBackup(m,'before-reset').money,99);});
-test('P0-14','Node reload simulation preserves saved state (browser pending)',()=>{const s=fresh(),m=store();s.money=88;saveProgress(m,s);const next=decode(m.getItem(KEY));assert.equal(next.money,88);});
-test('P0-15','quota failure cannot claim save success at API layer (browser UX pending)',()=>{const s=fresh(),m=store([],1);assert.throws(()=>saveProgress(m,s));assert.equal(m.getItem(KEY),null);});
-test('P0-16','KNOWN RISK: two tabs can overwrite newer progress (reproduction only)',()=>{const m=store(),a=fresh();saveProgress(m,a);const b=decode(m.getItem(KEY));a.money=100;saveProgress(m,a);b.money=1;saveProgress(m,b);assert.equal(decode(m.getItem(KEY)).money,1);});
-test('P0-17','pause/save transitions preserve valid progress (dialog/browser pending)',()=>{const m=store(),s=fresh();s.started=true;deploy(s);step(s,1/60);saveProgress(m,s);const r=decode(m.getItem(KEY));assert.equal(r.started,true);assert.equal(r.balls.length,3);});
+test('P0-13','before-reset survives autosave rotation',()=>{const s=fresh();s.money=99;const m=store([[KEY,raw(s)]]);const reset=resetSave(m,s);reset.money=5;saveProgress(m,reset,m.getItem(KEY));assert.equal(restoreBackup(m,'before-reset').money,99);});
+test('P0-14','Node reload simulation preserves saved state (browser pending)',()=>{const s=fresh(),m=store();s.money=88;saveProgress(m,s,m.getItem(KEY));const next=decode(m.getItem(KEY));assert.equal(next.money,88);});
+test('P0-15','quota failure cannot claim save success at API layer (browser UX pending)',()=>{const s=fresh(),m=store([],1);assert.throws(()=>saveProgress(m,s,m.getItem(KEY)));assert.equal(m.getItem(KEY),null);});
+test('P0-16','missing or stale expected snapshot rejects writes',()=>{const m=store(),a=fresh();saveProgress(m,a,null);const expected=m.getItem(KEY),b=decode(expected);a.money=100;saveProgress(m,a,expected);const n=m.writes.length;b.money=1;assert.throws(()=>saveProgress(m,b));assert.throws(()=>saveProgress(m,b,expected));assert.equal(decode(m.getItem(KEY)).money,100);assert.equal(m.writes.length,n);});
+test('P0-17','pause/save transitions preserve valid progress (dialog/browser pending)',()=>{const m=store(),s=fresh();s.started=true;deploy(s);step(s,1/60);saveProgress(m,s,m.getItem(KEY));const r=decode(m.getItem(KEY));assert.equal(r.started,true);assert.equal(r.balls.length,3);});
 test('P0-18','v1/v2 fixtures remain loadable and version unchanged',()=>{const one=decode(raw(oldV1())),two=decode(raw(fresh()));assert.equal(one.version,2);assert.equal(two.version,2);assert.equal(KEY,'pixeloid-demo-v1');});
 // Static integration guard: browser event behavior still needs a real two-tab test.
 test('P0-19','storage-event guard wired into app without save format changes',()=>{
@@ -75,10 +75,10 @@ test('P0-25','retry after backup or primary write failure retains live progress'
  for(const failAt of [1,2]){
   const prior=fresh(),live=fresh();live.money=87;
   const m=store([[KEY,raw(prior)]],failAt);
-  assert.throws(()=>saveProgress(m,live));
+  assert.throws(()=>saveProgress(m,live,m.getItem(KEY)));
   assert.equal(m.getItem(KEY),raw(prior));
   assert.equal(live.money,87);
-  assert.equal(saveProgress(m,live),true);
+  assert.equal(saveProgress(m,live,m.getItem(KEY)),true);
   assert.equal(decode(m.getItem(KEY)).money,87);
   assert.equal(m.getItem(KEY+'-backup'),raw(prior));
  }
@@ -101,11 +101,11 @@ test('P0-28','external clear event freezes stale writer (static)',()=>{
  assert.ok(app.includes('(event.key!==null&&event.oldValue===event.newValue)'));
 });
 test('P0-29','guarded stale writer cannot overwrite primary or rotate backup',()=>{
- const m=store(),a=fresh();saveProgress(m,a);const expected=m.getItem(KEY),b=decode(expected);
+ const m=store(),a=fresh();saveProgress(m,a,m.getItem(KEY));const expected=m.getItem(KEY),b=decode(expected);
  a.money=100;saveProgress(m,a,expected);const prior=m.getItem(KEY),backup=m.getItem(KEY+'-backup'),n=m.writes.length;
  b.money=1;assert.throws(()=>saveProgress(m,b,expected));assert.equal(m.getItem(KEY),prior);assert.equal(m.getItem(KEY+'-backup'),backup);assert.equal(m.writes.length,n);
 });
 let failed=0;
-for(const {id,description,fn} of tests){try{await fn();console.log(id==='P0-16'?'RISK':'PASS',id,description);}catch(e){failed++;console.error('FAIL',id,description,e);}}
-console.log(`P0 matrix: ${tests.length-failed}/${tests.length} Node scenarios passed (P0-16 reproduces an UNRESOLVED lost-update risk); browser-only aspects of P0-14..18 remain unverified.`);
+for(const {id,description,fn} of tests){try{await fn();console.log('PASS',id,description);}catch(e){failed++;console.error('FAIL',id,description,e);}}
+console.log(`P0 matrix: ${tests.length-failed}/${tests.length} Node scenarios passed; browser-only aspects of P0-14..18 remain unverified.`);
 if(failed)process.exitCode=1;
