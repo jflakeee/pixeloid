@@ -105,6 +105,14 @@ test('P0-29','guarded stale writer cannot overwrite primary or rotate backup',()
  a.money=100;saveProgress(m,a,expected);const prior=m.getItem(KEY),backup=m.getItem(KEY+'-backup'),n=m.writes.length;
  b.money=1;assert.throws(()=>saveProgress(m,b,expected));assert.equal(m.getItem(KEY),prior);assert.equal(m.getItem(KEY+'-backup'),backup);assert.equal(m.writes.length,n);
 });
+test('P0-30','read-only selection guard wiring (static)',()=>{
+ const app=readFileSync(new URL('../dist/app.mjs',import.meta.url),'utf8');
+ assert.ok(app.includes("writerActions.has(button.id)||button.hasAttribute('data-type')"));
+});
+test('P0-31','pointer completion rechecks writer permission (static)',()=>{
+ const app=readFileSync(new URL('../dist/app.mjs',import.meta.url),'utf8');
+ assert.ok(app.includes("if(writerGate.held&&!storageBlocked&&!externalConflict&&p&&e.type==='pointerup'"));
+});
 let failed=0;
 for(const {id,description,fn} of tests){try{await fn();console.log('PASS',id,description);}catch(e){failed++;console.error('FAIL',id,description,e);}}
 console.log(`P0 matrix: ${tests.length-failed}/${tests.length} Node scenarios passed; browser-only aspects of P0-14..18 remain unverified.`);
