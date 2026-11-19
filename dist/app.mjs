@@ -3,7 +3,7 @@ import {createWriterGate} from './writer-gate.mjs';
 import {restoreBackup,resetSave,saveProgress} from './storage.mjs';
 import{W,H,KEY,TYPES,fresh,hit,frontier,deploy,configure,buy,cost,progress,readyDevices,activate,step,encode,decode}from'./core.mjs';
 const $=id=>document.getElementById(id),canvas=$('game'),ctx=canvas.getContext('2d');let s=fresh(),running=false,started=false,selected=0,zoom=1,pan={x:0,y:0},scale=1,ox=0,oy=0,viewW=0,viewH=0,last=0,uiClock=0,saveClock=0,toastClock=0,eventCount='',audio=null,sound=false,hitSoundAt=0,storageBlocked=false,observedSaveRaw=null,externalConflict=false,writeFailed=false,resumeAfterSheet=false,draft=[3,0,0];
-try{const raw=localStorage.getItem(KEY);observedSaveRaw=raw;if(raw){s=decode(raw);started=Boolean(s.started);if(started)$('start').classList.add('hidden');$('pause').textContent='▶';}}catch{storageBlocked=true;$('saveState').textContent='저장 읽기 실패 · 기존 기록을 보존합니다';}
+try{const raw=localStorage.getItem(KEY);observedSaveRaw=raw;if(raw){s=decode(raw);selected=s.selected??0;started=Boolean(s.started);if(started)$('start').classList.add('hidden');$('pause').textContent='▶';}}catch{storageBlocked=true;$('saveState').textContent='저장 읽기 실패 · 기존 기록을 보존합니다';}
 const writerGate=createWriterGate(navigator.locks,KEY+'-writer');
 writerGate.start().then(acquired=>{
  if(!acquired){storageBlocked=true;running=false;$('saveState').textContent=writerGate.available?'다른 탭에서 실행 중 · 종료 후 여기를 눌러 새로고침하세요':'이 브라우저는 안전한 다중 탭 저장을 지원하지 않습니다 · 저장 중지';updateUI();}
@@ -75,6 +75,8 @@ for(let i=0;i<3;i++)$('device'+i).onclick=()=>{const d=s.devices[i];if(!d.active
 function formatTime(t){return String(Math.floor(t/60)).padStart(2,'0')+':'+String(Math.floor(t%60)).padStart(2,'0');}
 let previousReadyNames = new Set();
 function updateUI(){
+ for(const b of document.querySelectorAll('[data-type]')){const active=Number(b.dataset.type)===selected;b.classList.toggle('active',active);b.setAttribute('aria-pressed',String(active));}
+
  const canWrite=writerGate.held&&!storageBlocked&&!externalConflict;
  for(const b of document.querySelectorAll('#play,#pause,#redeploy,#applyConfig,#guideTarget,[data-type]'))b.disabled=!canWrite;
 
@@ -91,7 +93,7 @@ $('artifactResult').hidden=!s.won;if(s.won)$('artifactResult').textContent='핵�
  $('assignedTarget').textContent=assignment;
  const up=[100,250,600][s.speed];$('upgrade').innerHTML=up?`속도 강화 <b>${up} ✦</b>`:'속도 최대';$('upgrade').disabled=!canWrite||!up||s.money<up;for(let i=0;i<3;i++){const d=s.devices[i],p=Math.round(progress(s,d)*100);$('dp'+i).textContent=d.active?'✓':p+'%';$('dstate'+i).textContent=d.active?'복원 완료':'주변 발굴';$('mission'+i).classList.toggle('done',d.active);$('device'+i).textContent=d.active?(i===0?'출구 '+['동','남','서','북'][d.dir]+' · 회전 ↻':i===1?'충전 '+d.charge+'/30':'발견 완료'):p>=80?(i===2?'유물 회수 ✦':'장치 복원 ✦'):'목표로 지정 ↗';$('device'+i).disabled=!canWrite||(d.active&&i>0);}}
 $('play').onclick=()=>{started=true;s.started=true;running=true;for(let type=0;type<3;type++)deploy(s,type);$('start').classList.add('hidden');toast('지도를 눌러 목표를 바꿔보세요');save();};$('pause').onclick=()=>{if(!started){$('play').click();return;}running=!running;if(running&&sound)audio?.resume();save();updateUI();};
-for(const b of document.querySelectorAll('[data-type]'))b.onclick=()=>{selected=Number(b.dataset.type);s.selected=selected;document.querySelectorAll('[data-type]').forEach(x=>x.classList.toggle('active',x===b));toast(TYPES[selected].name+' 선택 · 다른 구체는 계속 발굴합니다');updateUI();};
+for(const b of document.querySelectorAll('[data-type]'))b.onclick=()=>{selected=Number(b.dataset.type);s.selected=selected;document.querySelectorAll('[data-type]').forEach(x=>x.classList.toggle('active',x===b));toast(TYPES[selected].name+' 선택 · 다른 구체는 계속 발굴합니다');save();updateUI();};
 $('redeploy').onclick=()=>{if(!s.counts[selected]){openGrowth();return;}if(!started){$('play').click();return;}deploy(s,selected);toast(TYPES[selected].name+' 구체만 보냈습니다');save();updateUI();};$('buy').onclick=()=>{if(buy(s)){toast('새 구체가 합류했습니다');draft=[...s.counts];renderComposition();save();updateUI();}};$('upgrade').onclick=()=>{const c=[100,250,600][s.speed];if(c&&s.money>=c){s.money-=c;s.speed++;toast('이동 속도 +'+s.speed*15+'%');save();updateUI();}};
 $('guideTarget').onclick=()=>deviceTarget(Math.max(0,s.devices.findIndex(d=>!d.active)));
 function openSheet(id){
