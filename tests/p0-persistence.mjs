@@ -59,12 +59,17 @@ test('P0-21','exclusive writer lock blocks second tab until released',async()=>{
 test('P0-22','app requires lock for save, restore and reset',()=>{
  const app=readFileSync(new URL('../dist/app.mjs',import.meta.url),'utf8');
  assert.match(app,/if \(storageBlocked \|\| !writerGate\.held\) return/);
- assert.match(app,/if\(!writerGate\.held\|\|storageBlocked\)throw Error\('read-only'\);restoreBackup/);
- assert.match(app,/if\(!writerGate\.held\|\|storageBlocked\)throw Error\('read-only'\);s=resetSave/);
+ assert.match(app,/if\(!writerGate\.held\|\|externalConflict\|\|localStorage\.getItem\(KEY\)!==observedSaveRaw\)throw Error\('read-only'\);restoreBackup/);
+ assert.match(app,/if\(!writerGate\.held\|\|externalConflict\|\|localStorage\.getItem\(KEY\)!==observedSaveRaw\)throw Error\('read-only'\);s=resetSave/);
 });
 test('P0-23','pagehide flushes save before releasing writer lock (static integration)',()=>{
  const app=readFileSync(new URL('../dist/app.mjs',import.meta.url),'utf8');
  assert.ok(app.includes("window.addEventListener('pagehide',event=>{save();if(!event.persisted)writerGate.release();});"));
+});
+test('P0-24','explicit reload reacquisition avoids promoting stale state',()=>{
+ const app=readFileSync(new URL('../dist/app.mjs',import.meta.url),'utf8');
+ assert.ok(app.includes("if(!writerGate.held||externalConflict)location.reload();"));
+ assert.ok(app.includes("running&&writerGate.held&&!storageBlocked&&!document.hidden"));
 });
 let failed=0;
 for(const {id,description,fn} of tests){try{await fn();console.log(id==='P0-16'?'RISK':'PASS',id,description);}catch(e){failed++;console.error('FAIL',id,description,e);}}
