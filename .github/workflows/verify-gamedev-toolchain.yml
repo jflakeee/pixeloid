@@ -36,3 +36,15 @@ jobs:
           test -f third_party/gamedev/pixelfx/README.md
           test -f third_party/gamedev/pixelfx/LICENSE
           git submodule status
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check installer and existing game regressions
+        shell: bash
+        run: |
+          set -euo pipefail
+          bash -n scripts/setup-gamedev-toolchain.sh
+          test "$(git config -f .gitmodules --name-only --get-regexp '^submodule\\..*\\.url | wc -l)" -eq 6
+          node --check dist/app.mjs
+          node test.mjs
+          node tests/p0-persistence.mjs
