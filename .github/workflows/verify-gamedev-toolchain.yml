@@ -48,3 +48,16 @@ jobs:
           node --check dist/app.mjs
           node test.mjs
           node tests/p0-persistence.mjs
+      - name: Build isolated PixelFX and PlinkFX preview
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd tools/fx-lab
+          npm install --no-package-lock --no-audit --no-fund
+          npm run build
+          test -s build/main.js
+          test -s build/index.html
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pixeloid-fx-lab
+          path: tools/fx-lab/build/
