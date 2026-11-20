@@ -7,11 +7,12 @@ const SIZE=64,frame=createFrame(SIZE,SIZE,SIZE/2,SIZE/2);
 const scratch=document.createElement('canvas');scratch.width=SIZE;scratch.height=SIZE;
 const scratchCtx=scratch.getContext('2d'),pixels=scratchCtx.createImageData(SIZE,SIZE);
 let active=null,elapsed=0,lastTrigger=-Infinity;
+export function enableAudio(){try{unlockAudio();return true;}catch{return false;}}
 export function trigger(kind,time,soundEnabled){
  if(!['hit','reward','win'].includes(kind)||time-lastTrigger<.1)return;
  lastTrigger=time;
  try{active=createFx(kind==='hit'?hitFx:rewardFx,{x:0,y:0});elapsed=0;}catch{active=null;}
- if(soundEnabled){try{unlockAudio();play(kind==='hit'?'hit':'coin',{volume:.2});}catch{/* optional audio */}}
+ if(soundEnabled){try{play(kind==='hit'?'hit':'coin',{volume:.2});}catch{/* optional audio */}}
 }
 export function drawFx(ctx,width,height,dt){
  if(!active)return;
