@@ -1,0 +1,11 @@
+import assert from 'node:assert/strict';
+import {createFeedbackDetector} from './feedback-events.mjs';
+const f=createFeedbackDetector();
+assert.deepEqual(f.read({mined:10,money:20,won:false}),[]);
+assert.deepEqual(f.read({mined:12,money:23,won:false}),[{type:'hit',count:2},{type:'reward',amount:3}]);
+assert.deepEqual(f.read({mined:12,money:23,won:true}),[{type:'win'}]);
+assert.deepEqual(f.read({mined:12,money:23,won:true}),[]);
+f.reset({mined:5,money:7,won:false});
+assert.deepEqual(f.read({mined:5,money:7,won:false}),[]);
+assert.throws(()=>f.read({mined:-1,money:0,won:false}),/invalid/);
+console.log('PASS isolated feedback event detector');
