@@ -1,0 +1,38 @@
+name: Verify pinned game tool sources
+on:
+  push:
+    branches: [chore/install-gamedev-toolchain-20261120]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          persist-credentials: false
+      - name: Confirm six pinned checkouts and licenses
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git -C third_party/gamedev/awesome-gamedev-agent-skills rev-parse HEAD)" = "c6ca6c41c839b68319ffc08430b99ab768debc32"
+          test -f third_party/gamedev/awesome-gamedev-agent-skills/README.md
+          test -f third_party/gamedev/awesome-gamedev-agent-skills/LICENSE
+          test "$(git -C third_party/gamedev/claude-code-game-studios rev-parse HEAD)" = "abc0de79d6ceb0b5d7aa693945849b3937afbe6a"
+          test -f third_party/gamedev/claude-code-game-studios/README.md
+          test -f third_party/gamedev/claude-code-game-studios/LICENSE
+          test "$(git -C third_party/gamedev/claude-gamedev-kit rev-parse HEAD)" = "86b5b6ddd33a542ef4ca1cc2de067feb82763cc2"
+          test -f third_party/gamedev/claude-gamedev-kit/README.md
+          test -f third_party/gamedev/claude-gamedev-kit/LICENSE
+          test "$(git -C third_party/gamedev/dream-loop rev-parse HEAD)" = "9bddb901f7d071cfefdd21e264267c757177a9df"
+          test -f third_party/gamedev/dream-loop/README.md
+          test -f third_party/gamedev/dream-loop/LICENSE
+          test "$(git -C third_party/gamedev/plinkfx rev-parse HEAD)" = "7e5f6a477037679a29df9c5141e9853b1267e7d8"
+          test -f third_party/gamedev/plinkfx/README.md
+          test -f third_party/gamedev/plinkfx/LICENSE
+          test "$(git -C third_party/gamedev/pixelfx rev-parse HEAD)" = "5294518ce7c72e48b6100a744596e0acf57f2826"
+          test -f third_party/gamedev/pixelfx/README.md
+          test -f third_party/gamedev/pixelfx/LICENSE
+          git submodule status
