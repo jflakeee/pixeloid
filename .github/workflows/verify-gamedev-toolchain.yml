@@ -56,6 +56,8 @@ jobs:
           npm install --no-package-lock --no-audit --no-fund
           npm run build
           node feedback-events.test.mjs
+          test -s ../../dist/fx-runtime.mjs
+          node --check ../../dist/fx-runtime.mjs
           test -s build/main.js
           test -s build/index.html
       - name: Chromium mobile FX smoke test
@@ -70,9 +72,16 @@ jobs:
           trap 'kill "$server" || true' EXIT
           for i in $(seq 1 30); do curl -fsS http://127.0.0.1:8766/ >/dev/null && break; sleep 1; done
           node browser-test.mjs
+          python3 -m http.server 8767 --bind 127.0.0.1 --directory ../../dist &
+          game_server=$!
+          trap 'kill "$server" "$game_server" || true' EXIT
+          for i in $(seq 1 30); do curl -fsS http://127.0.0.1:8767/ >/dev/null && break; sleep 1; done
+          node game-browser-test.mjs
       - uses: actions/upload-artifact@v4
         with:
           name: pixeloid-fx-lab
           path: |
             tools/fx-lab/build/
             tools/fx-lab/fx-lab-mobile.png
+            tools/fx-lab/game-fx-mobile.png
+            dist/fx-runtime.mjs
