@@ -1,5 +1,11 @@
 # Pixeloid · 잠든 수로
 
+## 🎮 게임 데모 바로 플레이
+
+**[▶ Pixeloid 웹 게임 데모 실행하기](https://jflakeee.github.io/pixeloid/)**
+
+설치 없이 PC 또는 모바일 브라우저에서 플레이할 수 있습니다.
+
 Standalone browser prototype for an Android-bound mining game. All runtime assets are in dist; no runtime packages or build step are required.
 
 ## Run
