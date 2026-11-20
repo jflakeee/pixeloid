@@ -44,7 +44,7 @@ jobs:
         run: |
           set -euo pipefail
           bash -n scripts/setup-gamedev-toolchain.sh
-          test "$(git config -f .gitmodules --name-only --get-regexp '^submodule\\..*\\.url | wc -l)" -eq 6
+          test "$(grep -c 'submodule "' .gitmodules)" -eq 6
           node --check dist/app.mjs
           node test.mjs
           node tests/p0-persistence.mjs
