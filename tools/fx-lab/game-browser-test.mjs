@@ -29,5 +29,12 @@ try{
  assert.ok(perf.elapsedMs<10000,'effect animation must not stall mobile browser');
  assert.deepEqual(errors,[],'no JS errors after repeated FX draws');
  await page.screenshot({path:'game-fx-mobile.png',fullPage:true});
+ const desktop=await browser.newPage({viewport:{width:1440,height:900}});
+ const desktopErrors=[];
+ desktop.on('pageerror',e=>desktopErrors.push(e.message));
+ await desktop.goto('http://127.0.0.1:8767/',{waitUntil:'networkidle'});
+ await desktop.screenshot({path:'game-fx-desktop.png',fullPage:true});
+ assert.deepEqual(desktopErrors,[],'no JS errors on desktop startup');
+ await desktop.close();
  console.log('PASS Pixeloid mobile FX 345 frames; elapsedMs='+perf.elapsedMs.toFixed(1));
 }finally{await browser.close();}
