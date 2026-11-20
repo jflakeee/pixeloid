@@ -1,0 +1,1 @@
+{"name":"pixeloid-fx-lab","private":true,"type":"module","scripts":{"build":"esbuild main.js --bundle --format=esm --platform=browser --outfile=build/main.js --log-level=warning && cp index.html build/index.html"},"dependencies":{"plinkfx":"0.3.0"},"devDependencies":{"esbuild":"0.25.12"}}
