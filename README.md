@@ -15,6 +15,14 @@
 
 ---
 
+## 📸 게임 화면 미리보기
+
+PC와 모바일 게임 화면은 실제 Chromium 브라우저에서 자동 캡처합니다. 이미지 파일은 개발 브랜치의 CI 아티팩트로 제공되며, 공개 README에 이미지를 직접 표시하는 작업은 캡처 검증 후 진행합니다.
+
+**[🖥 PC·📱 모바일 게임 화면 캡처 확인 (GitHub Actions)](https://github.com/jflakeee/pixeloid/actions/workflows/verify-gamedev-toolchain.yml)**
+
+워크플로 실행 결과의 `pixeloid-fx-lab` 아티팩트에서 `game-fx-desktop.png`와 `game-fx-mobile.png`를 확인할 수 있습니다. 해당 아티팩트는 최신 실행이 성공한 경우 생성됩니다.
+
 ## 🎮 어떤 게임인가요?
 
 96 × 64 크기의 지형을 발굴하고 광물을 모아 구체를 강화하세요. 서로 다른 역할의 구체를 배치하고, 묻힌 장치를 복원하며 수로의 비밀을 발견하는 게임입니다.
