@@ -22,7 +22,7 @@ writerGate.start().then(acquired=>{
 const feedback=createFeedbackDetector();feedback.reset(s);
 let fxRuntime=null;
 import('./fx-runtime.mjs').then(mod=>{fxRuntime=mod;}).catch(()=>{/* optional effects bundle unavailable */});
-let feedbackFlash=0,feedbackKind='hit';
+let feedbackFlash=0,feedbackKind='hit',feedbackDt=0;
 const terrain=document.createElement('canvas');terrain.width=W*4;terrain.height=H*4;const tc=terrain.getContext('2d');let lastMined=-1;
 function save(retry=false) {
  if ((storageBlocked && !(retry===true&&writeFailed&&!externalConflict)) || !writerGate.held) return;
@@ -74,7 +74,7 @@ function draw(){if(lastMined!==s.mined)renderTerrain();ctx.clearRect(0,0,viewW,v
  const t=s.target;ctx.strokeStyle='#e5c887';ctx.lineWidth=.22;ctx.setLineDash([.6,.6]);ctx.beginPath();ctx.arc(t.x,t.y,2.5,0,Math.PI*2);ctx.stroke();ctx.setLineDash([]);ctx.beginPath();ctx.moveTo(t.x-3.4,t.y);ctx.lineTo(t.x+3.4,t.y);ctx.moveTo(t.x,t.y-3.4);ctx.lineTo(t.x,t.y+3.4);ctx.stroke();
  for(const b of s.balls){ctx.fillStyle=TYPES[b.type].color;ctx.shadowColor=TYPES[b.type].color;ctx.shadowBlur=6;ctx.beginPath();ctx.arc(b.x,b.y,.45,0,Math.PI*2);ctx.fill();ctx.shadowBlur=0;ctx.globalAlpha=.3;ctx.beginPath();ctx.moveTo(b.x,b.y);ctx.lineTo(b.x-Math.cos(b.a)*1.7,b.y-Math.sin(b.a)*1.7);ctx.strokeStyle=TYPES[b.type].color;ctx.lineWidth=.3;ctx.stroke();ctx.globalAlpha=1;}ctx.restore();
  if(feedbackFlash>0){ctx.save();ctx.globalAlpha=Math.min(.55,feedbackFlash*2);ctx.strokeStyle=feedbackKind==='win'?'#fff1a3':feedbackKind==='reward'?'#b8f3cf':'#f9bc71';ctx.lineWidth=3;ctx.strokeRect(3,3,viewW-6,viewH-6);ctx.restore();}
- if(fxRuntime)fxRuntime.drawFx(ctx,viewW,viewH,Math.min(.05,(performance.now()-last)/1000||0));
+ if(fxRuntime)fxRuntime.drawFx(ctx,viewW,viewH,feedbackDt);
 }
 const desc=['구체의 방향을 바꾸고 다음 충돌을 강화','광물을 채굴해 주변 광맥에 전격 방출','묻힌 기억을 발견하고 탐사를 완료'];
 $('missions').innerHTML=s.devices.map((d,i)=>`<article class="mission" id="mission${i}"><div class="mission-top"><span class="number">0${i+1}</span><div><h3>${d.name}</h3><p>${desc[i]}</p></div></div><div class="meter"><span id="dstate${i}">주변 발굴</span><b id="dp${i}">0%</b></div><button id="device${i}">목표로 지정 ↗</button></article>`).join('');
@@ -186,5 +186,5 @@ document.addEventListener('click',event=>{
 canvas.addEventListener('pointerdown',event=>{
  if(!writerGate.held||storageBlocked){event.preventDefault();event.stopImmediatePropagation();}
 },true);
-function frame(t){const dt=Math.min(.05,(t-last)/1000||0);last=t;if(running&&writerGate.held&&!storageBlocked&&!document.hidden){step(s,dt);const feedbackEvent=feedback.read(s);if(feedbackEvent){feedbackKind=feedbackEvent;feedbackFlash=.22;if(fxRuntime)fxRuntime.trigger(feedbackEvent,s.time,sound);else if(feedbackEvent==='hit')tone();}saveClock+=dt;if(saveClock>10){save();saveClock=0;}const e=s.events.at(-1);if(e&&e.text+e.time!==eventCount){eventCount=e.text+e.time;toast(e.text);}}feedbackFlash=Math.max(0,feedbackFlash-dt);if(toastClock>0){toastClock-=dt;if(toastClock<=0)$('toast').style.opacity=0;}uiClock+=dt;if(uiClock>.15){updateUI();uiClock=0;}draw();requestAnimationFrame(frame);}
+function frame(t){const dt=Math.min(.05,(t-last)/1000||0);last=t;feedbackDt=dt;if(running&&writerGate.held&&!storageBlocked&&!document.hidden){step(s,dt);const feedbackEvent=feedback.read(s);if(feedbackEvent){feedbackKind=feedbackEvent;feedbackFlash=.22;if(fxRuntime)fxRuntime.trigger(feedbackEvent,s.time,sound);else if(feedbackEvent==='hit')tone();}saveClock+=dt;if(saveClock>10){save();saveClock=0;}const e=s.events.at(-1);if(e&&e.text+e.time!==eventCount){eventCount=e.text+e.time;toast(e.text);}}feedbackFlash=Math.max(0,feedbackFlash-dt);if(toastClock>0){toastClock-=dt;if(toastClock<=0)$('toast').style.opacity=0;}uiClock+=dt;if(uiClock>.15){updateUI();uiClock=0;}draw();requestAnimationFrame(frame);}
 selected=s.selected||0;document.querySelectorAll('[data-type]').forEach(b=>b.classList.toggle('active',Number(b.dataset.type)===selected));size();updateUI();requestAnimationFrame(frame);
