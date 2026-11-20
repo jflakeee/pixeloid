@@ -57,7 +57,21 @@ jobs:
           npm run build
           test -s build/main.js
           test -s build/index.html
+      - name: Chromium mobile FX smoke test
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd tools/fx-lab
+          npm install --no-save --no-package-lock --no-audit --no-fund playwright@1.56.1
+          npx playwright install --with-deps chromium
+          python3 -m http.server 8766 --bind 127.0.0.1 --directory build &
+          server=$!
+          trap 'kill "$server" || true' EXIT
+          for i in $(seq 1 30); do curl -fsS http://127.0.0.1:8766/ >/dev/null && break; sleep 1; done
+          node browser-test.mjs
       - uses: actions/upload-artifact@v4
         with:
           name: pixeloid-fx-lab
-          path: tools/fx-lab/build/
+          path: |
+            tools/fx-lab/build/
+            tools/fx-lab/fx-lab-mobile.png
