@@ -101,4 +101,5 @@ jobs:
             tools/fx-lab/build/
             tools/fx-lab/fx-lab-mobile.png
             tools/fx-lab/game-fx-mobile.png
+            tools/fx-lab/game-fx-desktop.png
             dist/fx-runtime.mjs
