@@ -55,6 +55,7 @@ jobs:
           cd tools/fx-lab
           npm install --no-package-lock --no-audit --no-fund
           npm run build
+          node feedback-events.test.mjs
           test -s build/main.js
           test -s build/index.html
       - name: Chromium mobile FX smoke test
